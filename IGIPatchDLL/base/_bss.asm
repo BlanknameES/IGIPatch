@@ -1,0 +1,20 @@
+PMI_IGIExe              PATCHMODULEINFO
+
+GameVersionID           rd 1
+
+;--------------------------------------------------
+
+ini_filename            rw MAX_PATH
+ini_main_enable         rd 1
+ini_opts_nocdcheck      rd 1
+ini_opts_timerspatch    rd 1
+ini_opts_windowedfix    rd 1
+ini_opts_cursorfix      rd 1
+
+;--------------------------------------------------
+; Improved timer resolution
+;--------------------------------------------------
+
+ui64QPCFrequency        rq 1 ;LARGE_INTEGER
+uiMaxSysTimerRes        rd 1
+Timer_nStartTime        rd 1 ; TODO: change to rq 1
