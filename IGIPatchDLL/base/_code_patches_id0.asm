@@ -100,6 +100,12 @@ proc ApplyPatches_ID0
         stdcall GetRealAddress,PMI_IGIExe,0x00490370
         stdcall MPatchCodeCave,eax,Timer_Read_CodeCave,6+6+1
         and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004444E0
+        stdcall MPatchAddress,Timer_GetPerformanceCounter.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x005F5484
+        stdcall MPatchAddress,Timer_GetPerformanceCounter.fixup2,eax,1
+        and     ebx,eax
 
         .windowedfix:
         cmp     dword[ini_opts_windowedfix],0
@@ -112,7 +118,7 @@ proc ApplyPatches_ID0
 
         .cursorfix:
         cmp     dword[ini_opts_cursorfix],0
-        je      .end
+        je      .borderless
 
         ; fix cursor precision in fullscreen for menus
         stdcall GetRealAddress,PMI_IGIExe,0x00424BC0
@@ -121,23 +127,86 @@ proc ApplyPatches_ID0
         stdcall GetRealAddress,PMI_IGIExe,0x00C28F8C
         stdcall MPatchAddress,Cursor_RunHandler.fixup1,eax,0
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x005C8C00
+        stdcall GetRealAddress,PMI_IGIExe,0x00C28B44
         stdcall MPatchAddress,Cursor_UpdatePosition.fixup1,eax,0
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x005C8BC4
+        stdcall GetRealAddress,PMI_IGIExe,0x00C28B48
         stdcall MPatchAddress,Cursor_UpdatePosition.fixup2,eax,0
         and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x005C8BC4
+        stdcall MPatchAddress,Cursor_CalcCursorPos.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x005C8C00
+        stdcall MPatchAddress,Cursor_CalcCursorPos.fixup2,eax,0
+        and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x0057BC58
-        stdcall MPatchAddress,Cursor_UpdatePosition.fixup3,eax,0
+        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup1,eax,0
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x0057BC5C
-        stdcall MPatchAddress,Cursor_UpdatePosition.fixup4,eax,0
+        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup2,eax,0
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x00C28B44
-        stdcall MPatchAddress,Cursor_UpdatePosition.fixup5,eax,0
+        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup3,eax,0
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x00C28B48
-        stdcall MPatchAddress,Cursor_UpdatePosition.fixup6,eax,0
+        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup4,eax,0
+        and     ebx,eax
+
+        .borderless:
+        cmp     dword[ini_opts_borderless],0
+        je      .end
+
+        ; add borderless command line command and initialize
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F674
+        stdcall MPatchCodeCave,eax,loc_48F674,5
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F679
+        stdcall MPatchAddress,loc_48F674.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F6D8
+        stdcall MPatchCodeCave,eax,loc_48F6D8,4+4
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F360
+        stdcall MPatchAddress,loc_48F6D8.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F6E0
+        stdcall MPatchAddress,loc_48F6D8.fixup2,eax,1
+        and     ebx,eax
+
+        ; add borderless screen mode support
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F759
+        stdcall MPatchCodeCave,eax,loc_48F759,2+2+5+5
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F767
+        stdcall MPatchAddress,loc_48F759.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00494FB6
+        stdcall MPatchCodeCave,eax,loc_494FB6,2+2+4+5+5
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00494FC8
+        stdcall MPatchAddress,loc_494FB6.fixup1,eax,1
+        and     ebx,eax
+
+        ; scale window to desktop resolution
+        stdcall GetRealAddress,PMI_IGIExe,0x00491B7C
+        stdcall MPatchAddress,eax,AppContext_IsNotWindowed,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x005C8C00
+        stdcall MPatchAddress,AppContext_IsNotWindowed.fixup1,eax,0
+        and     ebx,eax
+
+        ; fix decentered loading screen due to scaling
+        stdcall GetRealAddress,PMI_IGIExe,0x0048A466
+        stdcall MPatchCodeCave,eax,loc_48A466,0x0048A499-0x0048A466
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048A499
+        stdcall MPatchAddress,loc_48A466.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048A50D
+        stdcall MPatchCodeCave,eax,loc_48A50D,0x0048A53E-0x0048A50D
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048A53E
+        stdcall MPatchAddress,loc_48A50D.fixup1,eax,1
         and     ebx,eax
 
         .end:

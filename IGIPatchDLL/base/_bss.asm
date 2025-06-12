@@ -10,11 +10,12 @@ ini_opts_nocdcheck      rd 1
 ini_opts_timerspatch    rd 1
 ini_opts_windowedfix    rd 1
 ini_opts_cursorfix      rd 1
+ini_opts_borderless     rd 1
 
 ;--------------------------------------------------
 ; Improved timer resolution
 ;--------------------------------------------------
 
-ui64QPCFrequency        rq 1 ;LARGE_INTEGER
+Timer_lpCount           rq 1 ;LARGE_INTEGER
 uiMaxSysTimerRes        rd 1
-Timer_nStartTime        rd 1 ; TODO: change to rq 1
+Timer_nStartTime        rd 1

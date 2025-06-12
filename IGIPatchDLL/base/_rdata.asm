@@ -23,10 +23,21 @@ key_windowedfix         du 'FixWindowedCursor',0
 def_windowedfix         dd 1
 key_cursorfix           du 'FixCursorPrecision',0
 def_cursorfix           dd 1
+key_borderless          du 'BorderlessWindowPatch',0
+def_borderless          dd 1
 
 ;--------------------------------------------------
 ; Improved timer resolution
 ;--------------------------------------------------
 
-TimerAPIError_QPC       db 'QueryPerformanceCounter returned an error.',0
-TimerAPIError_tGT       db 'timeGetTime returned an error.',0
+cstrTimerAPIError_QPC   db 'GetPerformanceCounter called and no performance counter in system',0
+
+;--------------------------------------------------
+; borderless window
+;--------------------------------------------------
+
+dwFullscreenStyle       dd WS_POPUP
+dwWindowedStyle         dd WS_BORDER+WS_DLGFRAME+WS_SYSMENU+WS_MINIMIZEBOX ;+WS_SIZEBOX+WS_MAXIMIZEBOX
+dwBorderlessStyle       dd WS_POPUP
+
+cstrBorderless          db 'Borderless',0

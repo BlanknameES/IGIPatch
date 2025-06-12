@@ -126,6 +126,230 @@ endp
 
 ;--------------------------------------------------
 
+__alldvrm:
+
+        .arg_0 = 4
+        .arg_4 = 8
+        .arg_8 = 0Ch
+        .arg_C = 10h
+
+        push    edi
+        push    esi
+        push    ebp
+        xor     edi,edi
+        xor     ebp,ebp
+        mov     eax,dword[esp+0Ch+.arg_4]
+        or      eax,eax
+        jge     .loc_688AF4
+        inc     edi
+        inc     ebp
+        mov     edx,dword[esp+0Ch+.arg_0]
+        neg     eax
+        neg     edx
+        sbb     eax,0
+        mov     dword[esp+0Ch+.arg_4],eax
+        mov     dword[esp+0Ch+.arg_0],edx
+        .loc_688AF4:
+        mov     eax,dword[esp+0Ch+.arg_C]
+        or      eax,eax
+        jge     .loc_688B10
+        inc     edi
+        mov     edx,dword[esp+0Ch+.arg_8]
+        neg     eax
+        neg     edx
+        sbb     eax,0
+        mov     dword[esp+0Ch+.arg_C],eax
+        mov     dword[esp+0Ch+.arg_8],edx
+        .loc_688B10:
+        or      eax,eax
+        jnz     .loc_688B3C
+        mov     ecx,dword[esp+0Ch+.arg_8]
+        mov     eax,dword[esp+0Ch+.arg_4]
+        xor     edx,edx
+        div     ecx
+        mov     ebx,eax
+        mov     eax,dword[esp+0Ch+.arg_0]
+        div     ecx
+        mov     esi,eax
+        mov     eax,ebx
+        mul     dword[esp+0Ch+.arg_8]
+        mov     ecx,eax
+        mov     eax,esi
+        mul     dword[esp+0Ch+.arg_8]
+        add     edx,ecx
+        jmp     .loc_688B83
+        .loc_688B3C:
+        mov     ebx,eax
+        mov     ecx,dword[esp+0Ch+.arg_8]
+        mov     edx,dword[esp+0Ch+.arg_4]
+        mov     eax,dword[esp+0Ch+.arg_0]
+        .loc_688B4A:
+        shr     ebx,1
+        rcr     ecx,1
+        shr     edx,1
+        rcr     eax,1
+        or      ebx,ebx
+        jnz     .loc_688B4A
+        div     ecx
+        mov     esi,eax
+        mul     dword[esp+0Ch+.arg_C]
+        mov     ecx, eax
+        mov     eax,dword[esp+0Ch+.arg_8]
+        mul     esi
+        add     edx,ecx
+        jb      .loc_688B78
+        cmp     edx,dword[esp+0Ch+.arg_4]
+        ja      .loc_688B78
+        jb      .loc_688B81
+        cmp     eax,dword[esp+0Ch+.arg_0]
+        jbe     .loc_688B81
+        .loc_688B78:
+        dec     esi
+        sub     eax,dword[esp+0Ch+.arg_8]
+        sbb     edx,dword[esp+0Ch+.arg_C]
+        .loc_688B81:
+        xor     ebx,ebx
+        .loc_688B83:
+        sub     eax,dword[esp+0Ch+.arg_0]
+        sbb     edx,dword[esp+0Ch+.arg_4]
+        dec     ebp
+        jns     .loc_688B95
+        neg     edx
+        neg     eax
+        sbb     edx,0
+        .loc_688B95:
+        mov     ecx,edx
+        mov     edx,ebx
+        mov     ebx,ecx
+        mov     ecx,eax
+        mov     eax,esi
+        dec     edi
+        jnz     .loc_688BA9
+        neg     edx
+        neg     eax
+        sbb     edx,0
+        .loc_688BA9:
+        pop     ebp
+        pop     esi
+        pop     edi
+        retn    10h
+
+__allmul:
+
+        .arg_0 = 4
+        .arg_4 = 8
+        .arg_8 = 0Ch
+        .arg_C = 10h
+
+        mov     eax,dword[esp+.arg_4]
+        mov     ecx,dword[esp+.arg_C]
+        or      ecx,eax
+        mov     ecx,dword[esp+.arg_8]
+        jnz     .hard
+        mov     eax,dword[esp+.arg_0]
+        mul     ecx
+        retn    10h
+        .hard:
+        push    ebx
+        mul     ecx
+        mov     ebx,eax
+        mov     eax,dword[esp+4+.arg_0]
+        mul     dword[esp+4+.arg_C]
+        add     ebx,eax
+        mov     eax,dword[esp+4+.arg_0]
+        mul     ecx
+        add     edx,ebx
+        pop     ebx
+        retn    10h
+
+__alldiv:
+
+        .arg_0 = 4
+        .arg_4 = 8
+        .arg_8 = 0Ch
+        .arg_C = 10h
+
+        push    edi
+        push    esi
+        push    ebx
+        xor     edi,edi
+        mov     eax,dword[esp+0Ch+.arg_4]
+        or      eax,eax
+        jge     .loc_688A41
+        inc     edi
+        mov     edx,dword[esp+0Ch+.arg_0]
+        neg     eax
+        neg     edx
+        sbb     eax,0
+        mov     dword[esp+0Ch+.arg_4],eax
+        mov     dword[esp+0Ch+.arg_0],edx
+        .loc_688A41:
+        mov     eax,dword[esp+0Ch+.arg_C]
+        or      eax,eax
+        jge     .loc_688A5D
+        inc     edi
+        mov     edx,dword[esp+0Ch+.arg_8]
+        neg     eax
+        neg     edx
+        sbb     eax,0
+        mov     dword[esp+0Ch+.arg_C],eax
+        mov     dword[esp+0Ch+.arg_8],edx
+        .loc_688A5D:
+        or      eax,eax
+        jnz     .loc_688A79
+        mov     ecx,dword[esp+0Ch+.arg_8]
+        mov     eax,dword[esp+0Ch+.arg_4]
+        xor     edx,edx
+        div     ecx
+        mov     ebx,eax
+        mov     eax,dword[esp+0Ch+.arg_0]
+        div     ecx
+        mov     edx,ebx
+        jmp     .loc_688ABA
+        .loc_688A79:
+        mov     ebx,eax
+        mov     ecx,dword[esp+0Ch+.arg_8]
+        mov     edx,dword[esp+0Ch+.arg_4]
+        mov     eax,dword[esp+0Ch+.arg_0]
+        .loc_688A87:
+        shr     ebx,1
+        rcr     ecx,1
+        shr     edx,1
+        rcr     eax,1
+        or      ebx,ebx
+        jnz     .loc_688A87
+        div     ecx
+        mov     esi,eax
+        mul     dword[esp+0Ch+.arg_C]
+        mov     ecx,eax
+        mov     eax,dword[esp+0Ch+.arg_8]
+        mul     esi
+        add     edx,ecx
+        jb      .loc_688AB5
+        cmp     edx,dword[esp+0Ch+.arg_4]
+        ja      .loc_688AB5
+        jb      .loc_688AB6
+        cmp     eax,dword[esp+0Ch+.arg_0]
+        jbe     .loc_688AB6
+        .loc_688AB5:
+        dec     esi
+        .loc_688AB6:
+        xor     edx,edx
+        mov     eax,esi
+        .loc_688ABA:
+        dec     edi
+        jnz     .loc_688AC4
+        neg     edx
+        neg     eax
+        sbb     edx,0
+        .loc_688AC4:
+        pop     ebx
+        pop     esi
+        pop     edi
+        retn    10h
+
+;--------------------------------------------------
+
 proc PatchTrap
 
         push     dword[esp+4]

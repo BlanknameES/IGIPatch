@@ -92,6 +92,8 @@ proc ReadIniSettings
         mov     dword[ini_opts_windowedfix],eax
         invoke  GetPrivateProfileInt,sec_options,key_cursorfix,dword[def_cursorfix],ebx
         mov     dword[ini_opts_cursorfix],eax
+        invoke  GetPrivateProfileInt,sec_options,key_borderless,dword[def_borderless],ebx
+        mov     dword[ini_opts_borderless],eax
 
         pop     ebx
         ret

@@ -38,3 +38,11 @@ struct PATCHMODULEINFO
         dwDefImageBase          dd ?
         dwCurImageBase          dd ?
 ends
+
+;--------------------------------------------------
+; igi.exe
+
+struct AppContext2_s
+
+        isBorderless            dd ?
+ends
