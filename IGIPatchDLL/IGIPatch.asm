@@ -20,6 +20,7 @@ section '.code' code readable executable
 include 'base\_code.asm'
 include 'base\_code_patches_id0.asm'
 include 'base\_code_patches_id1.asm'
+include 'base\_code_patches_id2.asm'
 include 'base\_code_patches_codecaves.asm'
 include 'base\_code_utils.asm'
 

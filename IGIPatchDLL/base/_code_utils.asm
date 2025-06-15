@@ -1,3 +1,25 @@
+proc strncmp c str1,str2,num
+
+        xor     eax,eax
+        mov     ecx,dword[num]
+        jecxz   .end
+        push    esi edi
+        mov     edi,dword[str1]
+        mov     edx,ecx
+        repne   scasb
+        sub     edx,ecx
+        mov     esi,dword[str1]
+        mov     edi,dword[str2]
+        mov     ecx,edx
+        repe    cmpsb
+        mov     al,byte[esi-1]
+        sub     al,byte[edi-1]
+        movsx   eax,al
+        pop     edi esi
+        .end:
+        ret
+endp
+
 proc wcsnlen c wcs,num
 
         xor     eax,eax
@@ -355,7 +377,7 @@ proc PatchTrap
         push     dword[esp+4]
         pop      dword[0xDEADC0DE]
         .addr = $ - 4
-        ;TODO: show warning?
+        ; TODO: show warning?
         invoke   ExitProcess,-1 ;EXIT_FAILURE
 endp
 
@@ -412,7 +434,7 @@ proc MPatchCodeCave pBaseAddress,pCodeCave,nSize
         cmp     ebx,5
         jb      .end
         mov     esi,dword[pBaseAddress]
-        lea     eax,[nSize] ;use nSize to store bytes
+        lea     eax,[nSize] ; use nSize to store bytes
         mov     byte[eax],0xE9
         stdcall MPatchBuffer,esi,eax,1
         test    eax,eax
@@ -424,7 +446,7 @@ proc MPatchCodeCave pBaseAddress,pCodeCave,nSize
         sub     ebx,5
         jz      .end
         add     esi,4
-        mov     byte[nSize],0x90 ;0xCC
+        mov     byte[nSize],PATCH_ALIGN_OPCODE
         .loop:
         lea     eax,[nSize]
         stdcall MPatchBuffer,esi,eax,1
@@ -447,7 +469,7 @@ proc MPatchBuffer pBaseAddress,pBuffer,nSize
         xor     eax,eax
         cmp     ebx,eax
         je      .end
-        lea     eax,[nSize] ;store lpflOldProtect at nSize
+        lea     eax,[nSize] ; store lpflOldProtect at nSize
         invoke  VirtualProtect,esi,ebx,PAGE_EXECUTE_READWRITE,eax
         test    eax,eax
         jz      .end

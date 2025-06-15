@@ -94,6 +94,8 @@ proc ReadIniSettings
         mov     dword[ini_opts_cursorfix],eax
         invoke  GetPrivateProfileInt,sec_options,key_borderless,dword[def_borderless],ebx
         mov     dword[ini_opts_borderless],eax
+        invoke  GetPrivateProfileInt,sec_options,key_resolutions,dword[def_resolutions],ebx
+        mov     dword[ini_opts_resolutions],eax
 
         pop     ebx
         ret
@@ -162,6 +164,8 @@ proc ApplyPatches
         je      .id0
         cmp     dword[GameVersionID],1
         je      .id1
+        cmp     dword[GameVersionID],2
+        je      .id2
         .end:
         ret
 
@@ -171,5 +175,9 @@ proc ApplyPatches
 
         .id1:
         stdcall ApplyPatches_ID1
+        jmp     .end
+
+        .id2:
+        stdcall ApplyPatches_ID2
         jmp     .end
 endp

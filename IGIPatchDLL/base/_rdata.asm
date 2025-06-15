@@ -1,12 +1,15 @@
-num_version_ids         dd 2
+num_version_ids         dd 3
 
 build_id0_addr          dd 0x00541ECC
 build_id0_pstr          dd build_id0_cstr
 build_id1_addr          dd 0x00542624
 build_id1_pstr          dd build_id1_cstr
+build_id2_addr          dd 0x00540DC8
+build_id2_pstr          dd build_id2_cstr
 
 build_id0_cstr          db 'IGIMUTEX',0
 build_id1_cstr          db 'IGIMUTEX',0
+build_id2_cstr          db 'IGIMUTEX',0
 
 ;--------------------------------------------------
 
@@ -25,6 +28,8 @@ key_cursorfix           du 'FixCursorPrecision',0
 def_cursorfix           dd 1
 key_borderless          du 'BorderlessWindowPatch',0
 def_borderless          dd 1
+key_resolutions         du 'FixDisplayModes',0
+def_resolutions         dd 1
 
 ;--------------------------------------------------
 ; Improved timer resolution
@@ -41,3 +46,9 @@ dwWindowedStyle         dd WS_BORDER+WS_DLGFRAME+WS_SYSMENU+WS_MINIMIZEBOX ;+WS_
 dwBorderlessStyle       dd WS_POPUP
 
 cstrBorderless          db 'Borderless',0
+
+;--------------------------------------------------
+; display modes patch
+;--------------------------------------------------
+
+cstrGetBPPError         db 'Failed to retrieve screen BPP.',0

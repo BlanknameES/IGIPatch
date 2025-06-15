@@ -10,3 +10,10 @@ bIsAPIAvailable_tGT     dd 0
 ;--------------------------------------------------
 
 AppContext_tAppContext2 AppContext2_s
+
+;--------------------------------------------------
+; display modes patch
+;--------------------------------------------------
+
+Config_nScreenBPP       dd 0
+

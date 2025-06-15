@@ -30,6 +30,7 @@ ends
 
 ;--------------------------------------------------
 
+define PATCH_ALIGN_OPCODE 0x90 ;0xCC
 define PATCH_TEMP_PROC PatchTrap
 define PATCH_TEMP_ADDR PatchTrap.addr
 
@@ -46,3 +47,7 @@ struct AppContext2_s
 
         isBorderless            dd ?
 ends
+
+define MAXDISPLAYMODES 64 ; do NOT change
+
+define sizeof.Config_atDisplayDevice 5140 ;((128+128)+(4+4+4)*MAXDISPLAYMODES+4)*5 ; 5 devices

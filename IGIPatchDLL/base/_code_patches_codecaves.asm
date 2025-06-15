@@ -61,7 +61,7 @@ proc Cursor_GetWindowedCursorPos hWnd
 
         .scale_posy:
         fild    dword[PosY]
-        fimul   dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nWidth:0x00C28B48
+        fimul   dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nHeight:0x00C28B48
         .fixup4 = $-4
         invoke  GetSystemMetrics,SM_CYSCREEN
         mov     dword[ScreenSizeY],eax
@@ -239,11 +239,11 @@ Timer_GetPerformanceCounter: ; copied from IGI2
         retn    0
         .loc_43800E:
         push    cstrTimerAPIError_QPC
-        call    near PATCH_TEMP_PROC ;_LDebug_Error:0x004444E0
+        call    near PATCH_TEMP_PROC ;_LDebug_Error:0x004AF7B0
         .fixup1 = $-4
         add     esp,4
-        jmp     near PATCH_TEMP_PROC ;_abort:0x005F5484
-        .fixup2 = $-4
+        .abort: ; IGI 1 does not use abort()
+        jmp     .abort
 
 proc Timer_GetSystemTime c
 
@@ -475,4 +475,202 @@ loc_48A50D:
         .back:
         push    ebp
         jmp     near PATCH_TEMP_PROC ;loc_48A53E
+        .fixup1 = $-4
+
+;--------------------------------------------------
+; display modes patch
+;--------------------------------------------------
+
+proc GetScreenBitsPerPixel
+
+        push    esi edi
+        invoke  GetDC,0
+        test    eax,eax
+        jz      .error
+        mov     esi,eax
+        invoke  GetDeviceCaps,esi,12 ;BITSPIXEL
+        mov     edi,eax
+        invoke  ReleaseDC,0,esi
+        test    eax,eax
+        jz      .error
+        mov     eax,edi
+        .end:
+        pop     edi esi
+        ret
+
+        .error:
+        invoke  MessageBoxA,0,cstrGetBPPError,0,MB_OK+MB_ICONERROR
+        jmp     .error ; loop
+endp
+
+proc Config_EnumDisplayModeCB c ptDisplayMode ; fixed multiple issues: buffer overflow, incorrect signedness and invalid pointer
+
+        locals
+                nNumDisplayDevices rd 1
+        endl
+
+        push    ebx esi edi
+        mov     esi,dword[ptDisplayMode]
+
+        .check_valid:
+        cmp     byte[esi+1Ch],0 ;ptDisplayMode.zDeviceIdentifier[0]
+        je      .end
+        cmp     dword[esi+4],640 ;ptDisplayMode.nWidth
+        jb      .end
+        cmp     dword[esi+8],480 ;ptDisplayMode.nHeight
+        jb      .end
+        mov     eax,dword[esi+10h] ;ptDisplayMode.nDepth
+        cmp     eax,dword[Config_nScreenBPP] ; we only got 64 entries available, so display modes with low BPP are filtered out
+        jne     .end
+        mov     ecx,dword[PATCH_TEMP_ADDR] ;Config_nNumDisplayDevices:0x00567C90
+        .fixup1 = $-4
+        test    ecx,ecx
+        jz      .end
+
+        .loop_init:
+        xor     ebx,ebx
+        mov     dword[nNumDisplayDevices],ecx
+        mov     edi,PATCH_TEMP_ADDR ;&Config_atDisplayDevice:0x00567C98
+        .fixup2 = $-4
+        .loop_body:
+        lea     eax,[esi+1Ch] ;&ptDisplayMode.zDeviceIdentifier
+        ccall   strncmp,eax,edi,128
+        test    eax,eax
+        jnz     .loop_update
+        mov     eax,dword[edi+100h+12*MAXDISPLAYMODES] ;Config_atDisplayDevice[i].nNumDisplayModes
+        cmp     eax,MAXDISPLAYMODES
+        jae     .loop_update
+        .add_displaymode:
+        lea     ecx,[eax+eax*2]
+        lea     ecx,[edi+100h+ecx*4] ;&Config_atDisplayDevice[i].tDisplayModeList[Config_atDisplayDevice[i].nNumDisplayModes]
+        mov     edx,dword[esi+4] ;ptDisplayMode.nWidth
+        mov     dword[ecx],edx ;ptConfigDisplayMode.nWidth
+        mov     edx,dword[esi+8] ;ptDisplayMode.nHeight
+        mov     dword[ecx+4],edx ;ptConfigDisplayMode.nHeight
+        mov     edx,dword[esi+10h] ;ptDisplayMode.nBitsPerPixel
+        mov     dword[ecx+8],edx ;ptConfigDisplayMode.nDepth
+        inc     eax
+        mov     dword[edi+100h+12*MAXDISPLAYMODES],eax ;Config_atDisplayDevice.nNumDisplayModes
+        .loop_update:
+        inc     ebx
+        add     edi,sizeof.Config_atDisplayDevice/5 ; edi = &Config_atDisplayDevice[i]
+        cmp     ebx,dword[nNumDisplayDevices]
+        jb      .loop_body
+
+        .end:
+        pop     edi esi ebx
+        ret
+endp
+
+loc_40449E: ; Config_FillScreenResolutionListBox
+
+        mov     edx,dword[esi]
+        and     edx,0xFFFF
+        mov     ecx,dword[esi+4]
+        shl     ecx,16
+        or      edx,ecx
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4044B0
+        .fixup1 = $-4
+
+loc_404526: ; Config_GraphicOptionsSetResolution
+
+        call    near PATCH_TEMP_PROC ;Config_GetActiveGraphicOptions:0x00404590
+        .fixup1 = $-4
+        mov     edx,esi
+        shr     edx,16
+        mov     ecx,esi
+        and     ecx,0xFFFF
+        mov     dword[eax],ecx
+        mov     dword[eax+4],edx
+        push    dword[Config_nScreenBPP]
+        pop     dword[eax+8]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_404556
+        .fixup2 = $-4
+
+loc_40460C: ; Config_GraphicOptionsGetResolution
+
+        ;mov     eax,ebp
+        mov     ecx,dword[esp+30h-20h]
+        mov     edx,dword[Config_nScreenBPP]
+        cmp     dword[esi],ebp ;Config_GetActiveGraphicOptions.nWidth
+        jne     .back
+        cmp     dword[esi+4],ecx ;Config_GetActiveGraphicOptions.Height
+        jne     .back
+        cmp     dword[esi+8],edx ;Config_GetActiveGraphicOptions.nDepth
+        jne     .back
+
+        .found:
+        mov     ebx,esi
+        jmp     near PATCH_TEMP_PROC ;loc_404651
+        .fixup1 = $-4
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_404643
+        .fixup2 = $-4
+
+loc_404651: ; Config_GraphicOptionsGetResolution
+
+        xor     eax,eax
+        test    ebx,ebx
+        jz      .back
+
+        mov     eax,dword[ebx]
+        and     eax,0xFFFF
+        mov     ecx,dword[ebx+4]
+        shl     ecx,16
+        or      eax,ecx
+
+        .back:
+        mov     dword[esp+30h-18h+10h],PATCH_TEMP_ADDR ;sdefault:0x00567C74
+        .fixup1 = $-4
+        lea     esi,[esp+30h-18h]
+        jmp     near PATCH_TEMP_PROC ;loc_40466F
+        .fixup2 = $-4
+
+loc_405A91: ; Config_VerifyGraphicConfig
+
+        ;mov     eax,ebp
+        mov     ecx,dword[esp+24h-4]
+        mov     edx,dword[esp+24h-8]
+        cmp     dword[esi],ebp ;Config_GetActiveGraphicOptions.nWidth
+        jne     .back
+        cmp     dword[esi+4],ecx ;Config_GetActiveGraphicOptions.Height
+        jne     .back
+        cmp     dword[esi+8],edx ;Config_GetActiveGraphicOptions.nDepth
+        jne     .back
+
+        .found:
+        mov     ebx,esi
+        jmp     near PATCH_TEMP_PROC ;loc_405AD5
+        .fixup1 = $-4
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_405AC7
+        .fixup2 = $-4
+
+loc_405AD9: ; Config_VerifyGraphicConfig
+
+        test    ebx,ebx
+        jz      .default
+
+        mov     eax,dword[ebx]
+        mov     ecx,dword[ebx+4]
+        mov     dword[edx],eax
+        mov     dword[edx+4],ecx
+        push    dword[ebx+8]
+        pop     dword[edx+8]
+        jmp     .back
+
+        .default:
+        mov     dword[edx],640
+        mov     dword[edx+4],480
+        mov     dword[edx+8],32
+
+        .back:
+        mov     eax,dword[esp+24h-10h]
+        jmp     near PATCH_TEMP_PROC ;loc_405AED
         .fixup1 = $-4

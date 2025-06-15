@@ -11,6 +11,7 @@ ini_opts_timerspatch    rd 1
 ini_opts_windowedfix    rd 1
 ini_opts_cursorfix      rd 1
 ini_opts_borderless     rd 1
+ini_opts_resolutions    rd 1
 
 ;--------------------------------------------------
 ; Improved timer resolution

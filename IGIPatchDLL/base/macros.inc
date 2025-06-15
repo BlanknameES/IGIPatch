@@ -25,7 +25,7 @@ struc dq [data]
 
 struc du [data]
 {
-        common . du data 
+        common . du data
         sizeof.#. = $ - .
 }
 
