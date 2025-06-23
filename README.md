@@ -13,7 +13,7 @@ Individual features of the patch can be tweaked by editing the file 'IGIPatch.in
 - American
 - Japanese
 
-# Current feature list - v0.30 (updated 2025-06-15)
+# Current feature list - v0.40 (updated 2025-06-23)
 - CD check removal.
 - Improved timer resolution (beyond microseconds).
 - Fixed windows cursor being visible in windowed mode.
