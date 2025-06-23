@@ -22,6 +22,9 @@ Individual features of the patch can be tweaked by editing the file 'IGIPatch.in
 - Fixed buffer overflow when retrieving display modes. This solves the very known graphics menu crash.
 - Display modes below the max bit depth of the screen are no longer selectable. This has been done because the game is limited to only 64 display modes.
 - Fixed Resolution listbox showing a wrong display mode; Resolution limit raised from 8192x8192x32 to 65536x65536.
+- Added widescreen support; Screen stretching is disabled and FOV is automatically adjusted.
+- Added debug features via command-line arguments: NoLightmaps, NoTerrainLightmaps, DebugText, Debug, Small, DebugKeys.
+- Updated Borderless window mode:  Fixed incorrect background size for the loading screen; optimized cursor handling code.
 
 # Known issues
 1. Intro videos not playing:
