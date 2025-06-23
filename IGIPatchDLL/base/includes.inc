@@ -45,9 +45,11 @@ ends
 
 struct AppContext2_s
 
+        isDebugKeys             dd ?
         isBorderless            dd ?
 ends
 
 define MAXDISPLAYMODES 64 ; do NOT change
+define MAXDISPLAYDEVICES 5 ; do NOT change
 
-define sizeof.Config_atDisplayDevice 5140 ;((128+128)+(4+4+4)*MAXDISPLAYMODES+4)*5 ; 5 devices
+define sizeof.Config_atDisplayDevice 5140 ;((128+128)+(4+4+4)*MAXDISPLAYMODES+4)*5

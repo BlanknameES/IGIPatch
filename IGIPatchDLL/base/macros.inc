@@ -1,7 +1,7 @@
 ;# sizeof struc's by Tomasz Grysztar
 struc db [data]
 {
-        common . db data 
+        common . db data
         sizeof.#. = $ - .
 }
 
@@ -13,7 +13,7 @@ struc dw [data]
 
 struc dd [data]
 {
-        common . dd data 
+        common . dd data
         sizeof.#. = $ - .
 }
 

@@ -96,6 +96,10 @@ proc ReadIniSettings
         mov     dword[ini_opts_borderless],eax
         invoke  GetPrivateProfileInt,sec_options,key_resolutions,dword[def_resolutions],ebx
         mov     dword[ini_opts_resolutions],eax
+        invoke  GetPrivateProfileInt,sec_options,key_widescreen,dword[def_widescreen],ebx
+        mov     dword[ini_opts_widescreen],eax
+        invoke  GetPrivateProfileInt,sec_options,key_debugpatch,dword[def_debugpatch],ebx
+        mov     dword[ini_opts_debugpatch],eax
 
         pop     ebx
         ret

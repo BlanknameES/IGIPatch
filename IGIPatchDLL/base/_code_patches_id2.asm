@@ -123,43 +123,43 @@ proc ApplyPatches_ID2 ; IGI.exe v1.0 (region: japan)
         stdcall GetRealAddress,PMI_IGIExe,0x0058216C ;Cursor_nMouseY
         stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup2,eax,0
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x00C29004 ;Display_tActiveMode.nWidth
-        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup3,eax,0
+        stdcall GetRealAddress,PMI_IGIExe,0x00492029
+        stdcall MPatchCodeCave,eax,loc_491BE9,0x00492032-0x00492029
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x00C29008 ;Display_tActiveMode.nHeight
-        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup4,eax,0
+        stdcall GetRealAddress,PMI_IGIExe,0x005C8130 ;AppContext_tAppContext.isFullscreen
+        stdcall MPatchAddress,loc_491BE9.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x005C80F4 ;AppContext_tAppContext.hWnd
+        stdcall MPatchAddress,loc_491BE9.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00492032
+        stdcall MPatchAddress,loc_491BE9.fixup3,eax,1
         and     ebx,eax
 
         .borderless:
         cmp     dword[ini_opts_borderless],0
         je      .resolutions
 
-        ; add borderless command line command and initialize
-        stdcall GetRealAddress,PMI_IGIExe,0x0048FAA4
-        stdcall MPatchCodeCave,eax,loc_48F674,5
-        and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x0048FAA9
-        stdcall MPatchAddress,loc_48F674.fixup1,eax,1
-        and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x0048FB08
-        stdcall MPatchCodeCave,eax,loc_48F6D8,4+4
+        ; add borderless command-line param
+        stdcall GetRealAddress,PMI_IGIExe,0x0048FB54
+        stdcall MPatchCodeCave,eax,loc_48F724,0x0048FB5A-0x0048FB54
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x0048F790 ;AppMain_ParseCmdLineArgs
-        stdcall MPatchAddress,loc_48F6D8.fixup1,eax,1
+        stdcall MPatchAddress,loc_48F724.fixup1,eax,1
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x0048FB10
-        stdcall MPatchAddress,loc_48F6D8.fixup2,eax,1
+        stdcall GetRealAddress,PMI_IGIExe,0x0048FB5A
+        stdcall MPatchAddress,loc_48F724.fixup2,eax,1
         and     ebx,eax
 
-        ; add borderless screen mode support
+        ; add borderless window mode support
         stdcall GetRealAddress,PMI_IGIExe,0x0048FB89
-        stdcall MPatchCodeCave,eax,loc_48F759,2+2+5+5
+        stdcall MPatchCodeCave,eax,loc_48F759,0x0048FB97-0x0048FB89
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x0048FB97
         stdcall MPatchAddress,loc_48F759.fixup1,eax,1
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x00495456
-        stdcall MPatchCodeCave,eax,loc_494FB6,2+2+4+5+5
+        stdcall MPatchCodeCave,eax,loc_494FB6,0x00495468-0x00495456
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x00495468
         stdcall MPatchAddress,loc_494FB6.fixup1,eax,1
@@ -180,6 +180,12 @@ proc ApplyPatches_ID2 ; IGI.exe v1.0 (region: japan)
         stdcall GetRealAddress,PMI_IGIExe,0x0048A919
         stdcall MPatchAddress,loc_48A466.fixup1,eax,1
         and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048A92D
+        stdcall MPatchCodeCave,eax,loc_48A4AD,0x0048A933-0x0048A92D
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048A933
+        stdcall MPatchAddress,loc_48A4AD.fixup1,eax,1
+        and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x0048A98D
         stdcall MPatchCodeCave,eax,loc_48A50D,0x0048A9BE-0x0048A98D
         and     ebx,eax
@@ -189,7 +195,7 @@ proc ApplyPatches_ID2 ; IGI.exe v1.0 (region: japan)
 
         .resolutions:
         cmp     dword[ini_opts_resolutions],0
-        je      .end
+        je      .widescreen
 
         stdcall GetScreenBitsPerPixel
         mov     dword[Config_nScreenBPP],eax
@@ -253,6 +259,110 @@ proc ApplyPatches_ID2 ; IGI.exe v1.0 (region: japan)
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x0040547D
         stdcall MPatchAddress,loc_405AD9.fixup1,eax,1
+        and     ebx,eax
+
+        .widescreen:
+        cmp     dword[ini_opts_widescreen],0
+        je      .debugpatch
+
+        ; disable screen stretching
+        stdcall GetRealAddress,PMI_IGIExe,0x00492180
+        stdcall MPatchCodeCave,eax,Display_GetAspectRatio_CodeCave,0x004921A9-0x00492180
+        and     ebx,eax
+
+        ; Display_SetMode - save aspect ratio
+        stdcall GetRealAddress,PMI_IGIExe,0x0049207F
+        stdcall MPatchCodeCave,eax,loc_491C3F,0x00492085-0x0049207F
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00492085
+        stdcall MPatchAddress,loc_491C3F.fixup1,eax,1
+        and     ebx,eax
+
+        ; QCamera_Set - fix FOV
+        stdcall GetRealAddress,PMI_IGIExe,0x004DA270
+        stdcall MPatchCodeCave,eax,QCamera_Set_CodeCave,0x004DA278-0x004DA270
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004DA278
+        stdcall MPatchAddress,QCamera_Set_CodeCave.fixup1,eax,1
+        and     ebx,eax
+
+        ; ViewportQTask_New - fix FOV
+        ;stdcall GetRealAddress,PMI_IGIExe,0x004E8A10
+        ;stdcall MPatchCodeCave,eax,ViewportQTask_New_CodeCave,0x004E8A18-0x004E8A10
+        ;and     ebx,eax
+        ;stdcall GetRealAddress,PMI_IGIExe,0x004E8A00 ;sub_4E8100
+        ;stdcall MPatchAddress,ViewportQTask_New_CodeCave.fixup1,eax,1
+        ;and     ebx,eax
+        ;stdcall GetRealAddress,PMI_IGIExe,0x004E8A18
+        ;stdcall MPatchAddress,ViewportQTask_New_CodeCave.fixup2,eax,1
+        ;and     ebx,eax
+
+        ; HumanCamera_RunHandler - fix object FOV
+        stdcall GetRealAddress,PMI_IGIExe,0x004827E9
+        stdcall MPatchCodeCave,eax,loc_482859,0x004827EF-0x004827E9
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004827EF
+        stdcall MPatchAddress,loc_482859.fixup1,eax,1
+        and     ebx,eax
+
+        .debugpatch:
+        cmp     dword[ini_opts_debugpatch],0
+        je      .end
+
+        ; init debug command-line params
+        stdcall GetRealAddress,PMI_IGIExe,0x0048FAA4
+        stdcall MPatchCodeCave,eax,loc_48F674,0x0048FAA9-0x0048FAA4
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048FAA9
+        stdcall MPatchAddress,loc_48F674.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x005C7FB0 ;GameFunctions_isEnableDebugKeys
+        stdcall MPatchAddress,GameFunctions_SetEnableDebugKeys.fixup1,eax,0
+        and     ebx,eax
+
+        ; parse debug command-line params
+        stdcall GetRealAddress,PMI_IGIExe,0x0048FB08
+        stdcall MPatchCodeCave,eax,loc_48F6D8,0x0048FB10-0x0048FB08
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F790 ;AppMain_ParseCmdLineArgs
+        stdcall MPatchAddress,loc_48F6D8.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048FB10
+        stdcall MPatchAddress,loc_48F6D8.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F670 ;AppContext_SetLightmapsUsed
+        stdcall MPatchAddress,Main_ParseNoLightmapsCB.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F690 ;AppContext_SetTerrainLightmapsUsed
+        stdcall MPatchAddress,Main_ParseNoTerrainLightmapCB.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F610 ;AppContext_SetDebugtextState
+        stdcall MPatchAddress,Main_ParseDebugTextCB.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048F5D0 ;AppContext_SetDebugged
+        stdcall MPatchAddress,Main_ParseDebugCB.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x005C8330 ;AppContext_isFixmeSmall
+        stdcall MPatchAddress,Main_ParseSmallCB.fixup1,eax,0
+        and     ebx,eax
+
+        ; replace font
+        ;stdcall GetRealAddress,PMI_IGIExe,0x004E81E5
+        ;stdcall MPatchAddress,eax,debugfont,0
+        ;and     ebx,eax
+        ;stdcall GetRealAddress,PMI_IGIExe,0x004E8306
+        ;stdcall MPatchAddress,eax,debugfont,0
+        ;and     ebx,eax
+        ;stdcall GetRealAddress,PMI_IGIExe,0x004E8454
+        ;stdcall MPatchAddress,eax,debugfont,0
+        ;and     ebx,eax
+
+        ; disable requirement of completing all 14 missions
+        stdcall GetRealAddress,PMI_IGIExe,0x00488FC2
+        stdcall MPatchByte,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0048901A
+        stdcall MPatchByte,eax,0
         and     ebx,eax
 
         .end:

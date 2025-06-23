@@ -14,7 +14,7 @@ build_id2_cstr          db 'IGIMUTEX',0
 ;--------------------------------------------------
 
 sec_main                du 'Main',0
-key_enable              du 'EnablePatch',0
+key_enable              du 'EnableIGIPatch',0
 def_enable              dd 1
 
 sec_options             du 'Options',0
@@ -30,6 +30,10 @@ key_borderless          du 'BorderlessWindowPatch',0
 def_borderless          dd 1
 key_resolutions         du 'FixDisplayModes',0
 def_resolutions         dd 1
+key_widescreen          du 'WidescreenPatch',0
+def_widescreen          dd 1
+key_debugpatch          du 'EnableDebugFeatures',0
+def_debugpatch          dd 1
 
 ;--------------------------------------------------
 ; Improved timer resolution
@@ -52,3 +56,14 @@ cstrBorderless          db 'Borderless',0
 ;--------------------------------------------------
 
 cstrGetBPPError         db 'Failed to retrieve screen BPP.',0
+
+;--------------------------------------------------
+; debug patch
+;--------------------------------------------------
+
+cstrNoLightmaps         db 'NoLightmaps',0
+cstrNoTerrainLightmap   db 'NoTerrainLightmaps',0
+cstrDebugText           db 'DebugText',0 ;Debugtext
+cstrDebug               db 'Debug',0
+cstrDebugKeys           db 'DebugKeys',0
+cstrFixmeSmall          db 'Small',0

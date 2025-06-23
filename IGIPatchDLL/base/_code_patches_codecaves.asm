@@ -2,7 +2,7 @@
 ; cursor fix
 ;--------------------------------------------------
 
-proc Cursor_GetFullscreenCursorPos hWnd
+proc Cursor_GetFullscreenCursorPos c hWnd
 
         locals
                 Pos POINT
@@ -28,13 +28,11 @@ proc Cursor_GetFullscreenCursorPos hWnd
         ret
 endp
 
-proc Cursor_GetWindowedCursorPos hWnd
+proc Cursor_GetWindowedCursorPos c hWnd
 
         locals
-                PosX rd 1
-                PosY rd 1
-                ScreenSizeX rd 1
-                ScreenSizeY rd 1
+                Cursor_PosX rd 1
+                Cursor_PosY rd 1
         endl
 
         .get_pos:
@@ -47,37 +45,29 @@ proc Cursor_GetWindowedCursorPos hWnd
         je      .end
 
         .save_pos:
-        mov     dword[PosX],ecx
-        mov     dword[PosY],edx
+        mov     dword[Cursor_PosX],ecx
+        mov     dword[Cursor_PosY],edx
 
         .scale_posx:
-        fild    dword[PosX]
-        fimul   dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nWidth:0x00C28B44
-        .fixup3 = $-4
-        invoke  GetSystemMetrics,SM_CXSCREEN
-        mov     dword[ScreenSizeX],eax
-        fidiv   dword[ScreenSizeX]
-        fistp   dword[PosX]
+        fild    dword[Cursor_PosX]
+        fmul    dword[Cursor_XSensMult]
+        fistp   dword[Cursor_PosX]
 
         .scale_posy:
-        fild    dword[PosY]
-        fimul   dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nHeight:0x00C28B48
-        .fixup4 = $-4
-        invoke  GetSystemMetrics,SM_CYSCREEN
-        mov     dword[ScreenSizeY],eax
-        fidiv   dword[ScreenSizeY]
-        fistp   dword[PosY]
+        fild    dword[Cursor_PosY]
+        fmul    dword[Cursor_YSensMult]
+        fistp   dword[Cursor_PosY]
 
         .load_pos:
-        mov     ecx,dword[PosX]
-        mov     edx,dword[PosY]
+        mov     ecx,dword[Cursor_PosX]
+        mov     edx,dword[Cursor_PosY]
 
         .end:
         mov     eax,1
         ret
 endp
 
-proc Cursor_CalcCursorPos
+proc Cursor_CalcCursorPos c
 
         mov     eax,dword[PATCH_TEMP_ADDR] ;AppContext_tAppContext.hWnd:0x005C8BC4
         .fixup1 = $-4
@@ -87,20 +77,20 @@ proc Cursor_CalcCursorPos
         je      .windowed
 
         .fullscreen:
-        stdcall Cursor_GetFullscreenCursorPos,eax
+        ccall   Cursor_GetFullscreenCursorPos,eax
         ret
 
         .windowed:
-        stdcall Cursor_GetWindowedCursorPos,eax
+        ccall   Cursor_GetWindowedCursorPos,eax
         ret
 endp
 
-proc Cursor_UpdatePosition
+proc Cursor_UpdatePosition c
 
         push    ebx esi edi
         mov     ebx,ecx
 
-        stdcall Cursor_CalcCursorPos
+        ccall   Cursor_CalcCursorPos
         test    eax,eax
         jz      .end
         mov     esi,ecx
@@ -150,7 +140,7 @@ proc Cursor_RunHandler c this
         push    ebx
         mov     ebx,dword[this]
         mov     ecx,ebx
-        stdcall Cursor_UpdatePosition
+        ccall   Cursor_UpdatePosition
         mov     eax,dword[ebx+3Ch] ;this->isButtonDown
         mov     edx,dword[PATCH_TEMP_ADDR] ;Mouse_tMouse_bButton:0x00C28F8C
         .fixup1 = $-4
@@ -160,6 +150,53 @@ proc Cursor_RunHandler c this
         pop     ebx
         ret
 endp
+
+proc Cursor_UpdateSensMult c nWindowSizeX,nWindowSizeY
+
+        locals
+                Screen_SizeX rd 1
+                Screen_SizeY rd 1
+        endl
+
+        invoke  GetSystemMetrics,SM_CXSCREEN
+        mov     dword[Screen_SizeX],eax
+        invoke  GetSystemMetrics,SM_CYSCREEN
+        mov     dword[Screen_SizeY],eax
+
+        .posx_ratio:
+        fld1
+        fimul   dword[nWindowSizeX]
+        fidiv   dword[Screen_SizeX]
+        fstp    dword[Cursor_XSensMult]
+
+        .scale_ratio:
+        fld1
+        fimul   dword[nWindowSizeY]
+        fidiv   dword[Screen_SizeY]
+        fstp    dword[Cursor_YSensMult]
+
+        .end:
+        ret
+endp
+
+loc_491BE9:
+
+        cmp     dword[PATCH_TEMP_ADDR],0 ;AppContext_tAppContext.isFullscreen:0x005C8C00
+        .fixup1 = $-1-4
+        jne     .back
+        cmp     dword[AppContext_tAppContext2.isBorderless],0
+        je      .back
+
+        .update:
+        ccall   Cursor_UpdateSensMult,dword[ebp+4],dword[ebp+8]
+
+        .back:
+        mov     eax,dword[PATCH_TEMP_ADDR] ;AppContext_tAppContext.hWnd:0x005C8BC4
+        .fixup2 = $-4
+        push    0
+        push    0xFFFFFFF0
+        jmp     near PATCH_TEMP_PROC ;loc_491BF2
+        .fixup3 = $-4
 
 ;--------------------------------------------------
 ; Improved timer resolution
@@ -242,7 +279,7 @@ Timer_GetPerformanceCounter: ; copied from IGI2
         call    near PATCH_TEMP_PROC ;_LDebug_Error:0x004AF7B0
         .fixup1 = $-4
         add     esp,4
-        .abort: ; IGI 1 does not use abort()
+        .abort: ; IGI1 does not use abort()
         jmp     .abort
 
 proc Timer_GetSystemTime c
@@ -304,18 +341,14 @@ Timer_Read_CodeCave: ; TODO: check time wrap
         retn    0
 
 ;--------------------------------------------------
-; borderless window
+; borderless window patch
 ;--------------------------------------------------
-
-proc Main_ParseBorderlessCB c
-
-        mov     dword[AppContext_tAppContext2.isBorderless],1
-        ret
-endp
 
 proc AppContext_SetBorderless c isBorderless
 
-        movsx   eax,byte[isBorderless]
+        xor     eax,eax
+        cmp     dword[isBorderless],0
+        setne   al
         mov     dword[AppContext_tAppContext2.isBorderless],eax
         ret
 endp
@@ -326,17 +359,18 @@ proc AppContext_IsBorderless c
         ret
 endp
 
-loc_48F674:
+proc Main_ParseBorderlessCB c
 
+        ccall   AppContext_SetBorderless,1
+        ret
+endp
+
+loc_48F724:
+
+        .init_borderless:
         ccall   AppContext_SetBorderless,0
 
-        .back:
-        mov     ecx,48
-        jmp     near PATCH_TEMP_PROC ;loc_48F679
-        .fixup1 = $-4
-
-loc_48F6D8:
-
+        .parse_borderless:
         push    Main_ParseBorderlessCB
         push    cstrBorderless
         call    near PATCH_TEMP_PROC ;AppMain_ParseCmdLineArgs:0x0048F360
@@ -344,9 +378,8 @@ loc_48F6D8:
         add     esp,4*2
 
         .back:
-        lea     edx,[esp+49Ch-45Ch]
-        lea     eax,[esp+49Ch-464h]
-        jmp     near PATCH_TEMP_PROC ;loc_48F6E0
+        mov     esi,dword[GetSystemMetrics]
+        jmp     near PATCH_TEMP_PROC ;loc_48F72A
         .fixup2 = $-4
 
 loc_48F759:
@@ -409,10 +442,14 @@ endp
 loc_48A466:
 
         .progressbar_posx:
-        mov     eax,dword[ebx+4]
-        cmp     dword[AppContext_tAppContext2.isBorderless],0
-        je      .progressbar_posx_set
+        ccall   AppContext_IsNotWindowed
+        test    eax,eax
+        jz      .progressbar_posx_windowed
+        .progressbar_posx_borderless:
         invoke  GetSystemMetrics,SM_CXSCREEN
+        jmp     .progressbar_posx_set
+        .progressbar_posx_windowed:
+        mov     eax,dword[ebx+4]
         .progressbar_posx_set:
         sub     eax,640
         cdq
@@ -422,10 +459,14 @@ loc_48A466:
         mov     dword[esi+8],eax
 
         .progressbar_posy:
-        mov     eax,dword[ebx+8]
-        cmp     dword[AppContext_tAppContext2.isBorderless],0
-        je      .progressbar_posy_set
+        ccall   AppContext_IsNotWindowed
+        test    eax,eax
+        jz      .progressbar_posy_windowed
+        .progressbar_posy_borderless:
         invoke  GetSystemMetrics,SM_CYSCREEN
+        jmp     .progressbar_posy_set
+        .progressbar_posy_windowed:
+        mov     eax,dword[ebx+8]
         .progressbar_posy_set:
         sub     eax,480
         cdq
@@ -442,13 +483,38 @@ loc_48A466:
         jmp     near PATCH_TEMP_PROC ;loc_48A499
         .fixup1 = $-4
 
+loc_48A4AD:
+
+        .background_size:
+        ccall   AppContext_IsNotWindowed
+        test    eax,eax
+        jz      .background_size_windowed
+        .background_size_borderless:
+        invoke  GetSystemMetrics,SM_CXSCREEN
+        mov     ebx,eax ; trash ebx
+        invoke  GetSystemMetrics,SM_CYSCREEN
+        mov     edx,eax
+        mov     eax,ebx
+        jmp     .back
+        .background_size_windowed:
+        mov     edx,dword[ebx+8]
+        mov     eax,dword[ebx+4]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_48A4B3
+        .fixup1 = $-4
+
 loc_48A50D:
 
         .logo_posx:
-        mov     eax,dword[ebx+4]
-        cmp     dword[AppContext_tAppContext2.isBorderless],0
-        je      .logo_posx_set
+        ccall   AppContext_IsNotWindowed
+        test    eax,eax
+        jz      .logo_posx_windowed
+        .logo_posx_borderless:
         invoke  GetSystemMetrics,SM_CXSCREEN
+        jmp     .logo_posx_set
+        .logo_posx_windowed:
+        mov     eax,dword[ebx+4]
         .logo_posx_set:
         sub     eax,640
         cdq
@@ -459,10 +525,14 @@ loc_48A50D:
         fstp    dword[ebp+4]
 
         .logo_posy:
-        mov     eax,dword[ebx+8]
-        cmp     dword[AppContext_tAppContext2.isBorderless],0
-        je      .logo_posy_set
+        ccall   AppContext_IsNotWindowed
+        test    eax,eax
+        jz      .logo_posy_windowed
+        .logo_posy_borderless:
         invoke  GetSystemMetrics,SM_CYSCREEN
+        jmp     .logo_posy_set
+        .logo_posy_windowed:
+        mov     eax,dword[ebx+8]
         .logo_posy_set:
         sub     eax,480
         cdq
@@ -553,7 +623,7 @@ proc Config_EnumDisplayModeCB c ptDisplayMode ; fixed multiple issues: buffer ov
         mov     dword[edi+100h+12*MAXDISPLAYMODES],eax ;Config_atDisplayDevice.nNumDisplayModes
         .loop_update:
         inc     ebx
-        add     edi,sizeof.Config_atDisplayDevice/5 ; edi = &Config_atDisplayDevice[i]
+        add     edi,sizeof.Config_atDisplayDevice/MAXDISPLAYDEVICES ; edi = &Config_atDisplayDevice[i]
         cmp     ebx,dword[nNumDisplayDevices]
         jb      .loop_body
 
@@ -564,6 +634,7 @@ endp
 
 loc_40449E: ; Config_FillScreenResolutionListBox
 
+        .mode_to_id:
         mov     edx,dword[esi]
         and     edx,0xFFFF
         mov     ecx,dword[esi+4]
@@ -578,10 +649,14 @@ loc_404526: ; Config_GraphicOptionsSetResolution
 
         call    near PATCH_TEMP_PROC ;Config_GetActiveGraphicOptions:0x00404590
         .fixup1 = $-4
+
+        .id_to_mode:
         mov     edx,esi
         shr     edx,16
         mov     ecx,esi
         and     ecx,0xFFFF
+
+        .set_mode:
         mov     dword[eax],ecx
         mov     dword[eax+4],edx
         push    dword[Config_nScreenBPP]
@@ -593,17 +668,19 @@ loc_404526: ; Config_GraphicOptionsSetResolution
 
 loc_40460C: ; Config_GraphicOptionsGetResolution
 
-        ;mov     eax,ebp
-        mov     ecx,dword[esp+30h-20h]
-        mov     edx,dword[Config_nScreenBPP]
+        ;mov     eax,ebp ;Config_tConfig.atPlayerProfile[i].tGraphicOptions.nDisplayWidth
+        mov     ecx,dword[esp+30h-20h] ;Config_tConfig.atPlayerProfile[i].tGraphicOptions.nDisplayHeight
+        mov     edx,dword[esp+30h-1Ch] ;Config_tConfig.atPlayerProfile[i].tGraphicOptions.nDisplayDepth
         cmp     dword[esi],ebp ;Config_GetActiveGraphicOptions.nWidth
         jne     .back
-        cmp     dword[esi+4],ecx ;Config_GetActiveGraphicOptions.Height
+        cmp     dword[esi+4],ecx ;Config_GetActiveGraphicOptions.nHeight
         jne     .back
         cmp     dword[esi+8],edx ;Config_GetActiveGraphicOptions.nDepth
         jne     .back
+        cmp     dword[Config_nScreenBPP],edx
+        jne     .back
 
-        .found:
+        .matched:
         mov     ebx,esi
         jmp     near PATCH_TEMP_PROC ;loc_404651
         .fixup1 = $-4
@@ -614,13 +691,21 @@ loc_40460C: ; Config_GraphicOptionsGetResolution
 
 loc_404651: ; Config_GraphicOptionsGetResolution
 
-        xor     eax,eax
         test    ebx,ebx
-        jz      .back
+        jz      .default_mode_to_id
 
+        .mode_to_id:
         mov     eax,dword[ebx]
         and     eax,0xFFFF
         mov     ecx,dword[ebx+4]
+        shl     ecx,16
+        or      eax,ecx
+        jmp     .back
+
+        .default_mode_to_id:
+        mov     eax,640
+        and     eax,0xFFFF
+        mov     ecx,480
         shl     ecx,16
         or      eax,ecx
 
@@ -633,17 +718,19 @@ loc_404651: ; Config_GraphicOptionsGetResolution
 
 loc_405A91: ; Config_VerifyGraphicConfig
 
-        ;mov     eax,ebp
-        mov     ecx,dword[esp+24h-4]
-        mov     edx,dword[esp+24h-8]
+        mov     edx,dword[esp+24h-8] ;Config_tConfig.atPlayerProfile[i].tGraphicOptions.nDisplayWidth
+        mov     ecx,dword[esp+24h-4] ;Config_tConfig.atPlayerProfile[i].tGraphicOptions.nDisplayHeight
+        ;mov     eax,ebp ;Config_tConfig.atPlayerProfile[i].tGraphicOptions.nDisplayDepth
         cmp     dword[esi],ebp ;Config_GetActiveGraphicOptions.nWidth
         jne     .back
-        cmp     dword[esi+4],ecx ;Config_GetActiveGraphicOptions.Height
+        cmp     dword[esi+4],ecx ;Config_GetActiveGraphicOptions.nHeight
         jne     .back
         cmp     dword[esi+8],edx ;Config_GetActiveGraphicOptions.nDepth
         jne     .back
+        cmp     dword[Config_nScreenBPP],edx
+        jne     .back
 
-        .found:
+        .matched:
         mov     ebx,esi
         jmp     near PATCH_TEMP_PROC ;loc_405AD5
         .fixup1 = $-4
@@ -655,8 +742,9 @@ loc_405A91: ; Config_VerifyGraphicConfig
 loc_405AD9: ; Config_VerifyGraphicConfig
 
         test    ebx,ebx
-        jz      .default
+        jz      .copy_default
 
+        .copy:
         mov     eax,dword[ebx]
         mov     ecx,dword[ebx+4]
         mov     dword[edx],eax
@@ -665,12 +753,225 @@ loc_405AD9: ; Config_VerifyGraphicConfig
         pop     dword[edx+8]
         jmp     .back
 
-        .default:
+        .copy_default:
         mov     dword[edx],640
         mov     dword[edx+4],480
-        mov     dword[edx+8],32
+        push    dword[Config_nScreenBPP]
+        pop     dword[edx+8]
 
         .back:
         mov     eax,dword[esp+24h-10h]
         jmp     near PATCH_TEMP_PROC ;loc_405AED
         .fixup1 = $-4
+
+;--------------------------------------------------
+; widescreen patch
+;--------------------------------------------------
+
+proc Display_GetAspectRatio_CodeCave c ; disable screen stretching
+
+        fld1
+        ret
+endp
+
+proc SetDisplayAspectRatio nWidth,nHeight
+
+        locals
+                v43Width dd 4.0
+                v43Height dd 3.0
+        endl
+
+        .aspect_ratio:
+        fild    dword[nWidth]
+        fidiv   dword[nHeight]
+        fstp    dword[Display_vAspectRatio]
+
+        .rel_aspect_ratio:
+        fild    dword[nWidth]
+        fmul    dword[v43Height]
+        fild    dword[nHeight]
+        fmul    dword[v43Width]
+        fdivp   st1,st0
+        fstp    dword[Display_vRelAspectRatio]
+
+        .end:
+        ret
+endp
+
+loc_491C3F: ; Display_SetMode
+
+        invoke  SetFocus
+
+        stdcall SetDisplayAspectRatio,dword[ebp+4],dword[ebp+8]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_48285F
+        .fixup1 = $-4
+
+QCamera_Set_CodeCave:
+
+        fld     dword[esp+10h]
+        fmul    dword[Display_vRelAspectRatio]
+        fstp    dword[esp+10h]
+
+        .back:
+        mov     edx,dword[esp+4]
+        mov     eax,dword[esp+1Ch]
+        jmp     near PATCH_TEMP_PROC ;loc_4D9878
+        .fixup1 = $-4
+
+ViewportQTask_New_CodeCave:
+
+        fld     dword[esp+30h]
+        fmul    dword[Display_vRelAspectRatio]
+        fstp    dword[esp+30h]
+
+        .back:
+        push    esi
+        push    0
+        call    near PATCH_TEMP_PROC ;sub_4E8100:0x004E8100
+        .fixup1 = $-4
+        jmp     near PATCH_TEMP_PROC ;loc_4E8118
+        .fixup2 = $-4
+
+proc GetAdjustedObjectFOV vObjectFOV
+
+        fld     dword[vObjectFOV]
+        fmul    dword[Display_vRelAspectRatio]
+        ret
+endp
+
+loc_482859: ; HumanCamera_RunHandler
+
+        stdcall GetAdjustedObjectFOV,dword[esi+0DCh]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_48285F
+        .fixup1 = $-4
+
+;--------------------------------------------------
+; debug patch
+;--------------------------------------------------
+
+proc GameFunctions_SetEnableDebugKeys c isEnableDebugKeys
+
+        xor     eax,eax
+        cmp     dword[isEnableDebugKeys],0
+        setne   al
+        mov     dword[PATCH_TEMP_ADDR],eax ;GameFunctions_isEnableDebugKeys:0x0057B194
+        .fixup1 = $-4
+        ret
+endp
+
+proc AppContext_SetDebugKeysState c isDebugKeys
+
+        xor     eax,eax
+        cmp     dword[isDebugKeys],0
+        setne   al
+        mov     dword[AppContext_tAppContext2.isDebugKeys],eax
+        ccall   GameFunctions_SetEnableDebugKeys,eax
+        ret
+endp
+
+proc AppContext_isDebugKeys c
+
+        mov     eax,dword[AppContext_tAppContext2.isDebugKeys]
+        ret
+endp
+
+proc Main_ParseNoLightmapsCB c
+
+        push    1
+        call    near PATCH_TEMP_PROC ;AppContext_SetLightmapsUsed:0x0048F240
+        .fixup1 = $-4
+        add     esp,4
+        ret
+endp
+
+proc Main_ParseNoTerrainLightmapCB c
+
+        push    1
+        call    near PATCH_TEMP_PROC ;AppContext_SetTerrainLightmapsUsed:0x0048F260
+        .fixup1 = $-4
+        add     esp,4
+        ret
+endp
+
+proc Main_ParseDebugTextCB c
+
+        push    1
+        call    near PATCH_TEMP_PROC ;AppContext_SetDebugtextState:0x0048F1E0
+        .fixup1 = $-4
+        add     esp,4
+        ret
+endp
+
+proc Main_ParseDebugCB c
+
+        push    1
+        call    near PATCH_TEMP_PROC ;AppContext_SetDebugged:0x0048F1A0
+        .fixup1 = $-4
+        add     esp,4
+        ret
+endp
+
+proc Main_ParseSmallCB c
+
+        mov     byte[PATCH_TEMP_ADDR],1 ;AppContext_isFixmeSmall:0x005C8E00
+        .fixup1 = $-1-4
+        ret
+endp
+
+proc Main_ParseDebugKeysCB c
+
+        ccall   AppContext_SetDebugKeysState,1
+        ret
+endp
+
+loc_48F674: ; WinMain
+
+        .init_params:
+        ccall   AppContext_SetDebugKeysState,0
+
+        .back:
+        mov     ecx,48
+        jmp     near PATCH_TEMP_PROC ;loc_48F679
+        .fixup1 = $-4
+
+loc_48F6D8: ; WinMain
+
+        mov     ebx,PATCH_TEMP_PROC ;AppMain_ParseCmdLineArgs:0x0048F360
+        .fixup1 = $-4
+
+        .parse_params:
+        push    Main_ParseNoLightmapsCB
+        push    cstrNoLightmaps
+        call    ebx ; AppMain_ParseCmdLineArgs()
+        add     esp,4*2
+        push    Main_ParseNoTerrainLightmapCB
+        push    cstrNoTerrainLightmap
+        call    ebx ; AppMain_ParseCmdLineArgs()
+        add     esp,4*2
+        push    Main_ParseDebugTextCB
+        push    cstrDebugText
+        call    ebx ; AppMain_ParseCmdLineArgs()
+        add     esp,4*2
+        push    Main_ParseDebugCB
+        push    cstrDebug
+        call    ebx ; AppMain_ParseCmdLineArgs()
+        add     esp,4*2
+        push    Main_ParseSmallCB
+        push    cstrFixmeSmall
+        call    ebx ; AppMain_ParseCmdLineArgs()
+        add     esp,4*2
+        push    Main_ParseDebugKeysCB
+        push    cstrDebugKeys
+        call    ebx ; AppMain_ParseCmdLineArgs()
+        add     esp,4*2
+
+        .back:
+        xor     ebx,ebx
+        lea     edx,[esp+49Ch-45Ch]
+        lea     eax,[esp+49Ch-464h]
+        jmp     near PATCH_TEMP_PROC ;loc_48F6E0
+        .fixup2 = $-4
