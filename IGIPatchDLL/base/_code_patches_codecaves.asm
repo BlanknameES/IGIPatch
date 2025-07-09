@@ -5,11 +5,11 @@
 proc Cursor_GetFullscreenCursorPos c hWnd
 
         locals
-                Pos POINT
+                Cursor_Pos POINT
         endl
 
         push    ebx
-        lea     ebx,[Pos]
+        lea     ebx,[Cursor_Pos]
         invoke  GetCursorPos,ebx
         test    eax,eax
         jz      .check_pos
@@ -31,8 +31,7 @@ endp
 proc Cursor_GetWindowedCursorPos c hWnd
 
         locals
-                Cursor_PosX rd 1
-                Cursor_PosY rd 1
+                Cursor_Pos POINT
         endl
 
         .get_pos:
@@ -45,22 +44,22 @@ proc Cursor_GetWindowedCursorPos c hWnd
         je      .end
 
         .save_pos:
-        mov     dword[Cursor_PosX],ecx
-        mov     dword[Cursor_PosY],edx
+        mov     dword[Cursor_Pos+POINT.x],ecx
+        mov     dword[Cursor_Pos+POINT.y],edx
 
         .scale_posx:
-        fild    dword[Cursor_PosX]
+        fild    dword[Cursor_Pos+POINT.x]
         fmul    dword[Cursor_XSensMult]
-        fistp   dword[Cursor_PosX]
+        fistp   dword[Cursor_Pos+POINT.x]
 
         .scale_posy:
-        fild    dword[Cursor_PosY]
+        fild    dword[Cursor_Pos+POINT.y]
         fmul    dword[Cursor_YSensMult]
-        fistp   dword[Cursor_PosY]
+        fistp   dword[Cursor_Pos+POINT.y]
 
         .load_pos:
-        mov     ecx,dword[Cursor_PosX]
-        mov     edx,dword[Cursor_PosY]
+        mov     ecx,dword[Cursor_Pos+POINT.x]
+        mov     edx,dword[Cursor_Pos+POINT.y]
 
         .end:
         mov     eax,1
@@ -154,49 +153,49 @@ endp
 proc Cursor_UpdateSensMult c nWindowSizeX,nWindowSizeY
 
         locals
-                Screen_SizeX rd 1
-                Screen_SizeY rd 1
+                Screen_Size POINT
         endl
 
+        cmp     dword[PATCH_TEMP_ADDR],0 ;AppContext_tAppContext.isFullscreen:0x005C8C00
+        .fixup1 = $-1-4
+        jne     .end
+        cmp     dword[AppContext_tAppContext2.isBorderless],0
+        je      .end
+
+        .get_screen_size_borderless:
         invoke  GetSystemMetrics,SM_CXSCREEN
-        mov     dword[Screen_SizeX],eax
+        mov     dword[Screen_Size+POINT.x],eax
         invoke  GetSystemMetrics,SM_CYSCREEN
-        mov     dword[Screen_SizeY],eax
+        mov     dword[Screen_Size+POINT.y],eax
 
         .posx_ratio:
         fld1
         fimul   dword[nWindowSizeX]
-        fidiv   dword[Screen_SizeX]
+        fidiv   dword[Screen_Size+POINT.x]
         fstp    dword[Cursor_XSensMult]
 
-        .scale_ratio:
+        .posy_ratio:
         fld1
         fimul   dword[nWindowSizeY]
-        fidiv   dword[Screen_SizeY]
+        fidiv   dword[Screen_Size+POINT.y]
         fstp    dword[Cursor_YSensMult]
 
         .end:
         ret
 endp
 
-loc_491BE9:
-
-        cmp     dword[PATCH_TEMP_ADDR],0 ;AppContext_tAppContext.isFullscreen:0x005C8C00
-        .fixup1 = $-1-4
-        jne     .back
-        cmp     dword[AppContext_tAppContext2.isBorderless],0
-        je      .back
+loc_491BE9: ; Display_SetMode
 
         .update:
         ccall   Cursor_UpdateSensMult,dword[ebp+4],dword[ebp+8]
 
         .back:
         mov     eax,dword[PATCH_TEMP_ADDR] ;AppContext_tAppContext.hWnd:0x005C8BC4
-        .fixup2 = $-4
+        .fixup1 = $-4
         push    0
         push    0xFFFFFFF0
         jmp     near PATCH_TEMP_PROC ;loc_491BF2
-        .fixup3 = $-4
+        .fixup2 = $-4
 
 ;--------------------------------------------------
 ; Improved timer resolution
@@ -768,31 +767,19 @@ loc_405AD9: ; Config_VerifyGraphicConfig
 ; widescreen patch
 ;--------------------------------------------------
 
-proc Display_GetAspectRatio_CodeCave c ; disable screen stretching
-
-        fld1
-        ret
-endp
-
 proc SetDisplayAspectRatio nWidth,nHeight
 
-        locals
-                v43Width dd 4.0
-                v43Height dd 3.0
-        endl
-
-        .aspect_ratio:
+        .store_aspect_ratio:
         fild    dword[nWidth]
         fidiv   dword[nHeight]
-        fstp    dword[Display_vAspectRatio]
-
-        .rel_aspect_ratio:
-        fild    dword[nWidth]
-        fmul    dword[v43Height]
-        fild    dword[nHeight]
-        fmul    dword[v43Width]
-        fdivp   st1,st0
+        fst     dword[Display_vAspectRatio]
+        fmul    dword[Display_vAspectRatio34]
         fstp    dword[Display_vRelAspectRatio]
+
+        .store_aspect_ratio_inverted:
+        fld1
+        fdiv    dword[Display_vRelAspectRatio]
+        fstp    dword[Display_vInvAspectRatio]
 
         .end:
         ret
@@ -808,45 +795,348 @@ loc_491C3F: ; Display_SetMode
         jmp     near PATCH_TEMP_PROC ;loc_48285F
         .fixup1 = $-4
 
-QCamera_Set_CodeCave:
+proc Display_GetAspectRatio c ; currently unused
 
-        fld     dword[esp+10h]
-        fmul    dword[Display_vRelAspectRatio]
-        fstp    dword[esp+10h]
-
-        .back:
-        mov     edx,dword[esp+4]
-        mov     eax,dword[esp+1Ch]
-        jmp     near PATCH_TEMP_PROC ;loc_4D9878
-        .fixup1 = $-4
-
-ViewportQTask_New_CodeCave:
-
-        fld     dword[esp+30h]
-        fmul    dword[Display_vRelAspectRatio]
-        fstp    dword[esp+30h]
-
-        .back:
-        push    esi
-        push    0
-        call    near PATCH_TEMP_PROC ;sub_4E8100:0x004E8100
-        .fixup1 = $-4
-        jmp     near PATCH_TEMP_PROC ;loc_4E8118
-        .fixup2 = $-4
-
-proc GetAdjustedObjectFOV vObjectFOV
-
-        fld     dword[vObjectFOV]
-        fmul    dword[Display_vRelAspectRatio]
+        fld     dword[Display_vAspectRatio]
         ret
 endp
 
-loc_482859: ; HumanCamera_RunHandler
+proc Display_GetRelAspectRatio c ; get aspect ratio relative to 4:3
 
-        stdcall GetAdjustedObjectFOV,dword[esi+0DCh]
+        fld     dword[Display_vRelAspectRatio]
+        ret
+endp
+
+proc Display_GetInvAspectRatio c ; get inverted aspect ratio relative to 4:3
+
+        fld     dword[Display_vInvAspectRatio]
+        ret
+endp
+
+TransContext_Create_CodeCave:
+
+        .vFOVX = 10h
+
+        .set_vfovx:
+        call    Display_GetRelAspectRatio
+        fmul    dword[esp+34h+.vFOVX]
+        fstp    dword[ebx+40h] ; ptTransContext->vFOVX = Display_GetRelAspectRatio() * vFOVX;
+
+        .set_vfovy:
+        fld     dword[Display_vAspectRatio34]
+        fmul    dword[esp+34h+.vFOVX]
+        fstp    dword[ebx+44h] ; ptTransContext->vFOVY = Display_vAspectRatio34 * vFOVX);
+
+        .set_vscreenfovx:
+        fld     dword[PATCH_TEMP_ADDR] ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth:0x00BCABC8
+        .fixup1 = $-4
+        fdiv    dword[ebx+40h]
+        fstp    dword[ebx+48h] ; ptTransContext->vScreenFOVX = RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth / ptTransContext->vFOVX;
+
+        .set_vscreenfovy:
+        fld     dword[ebx+48h]
+        fstp    dword[ebx+4Ch] ; ptTransContext->vScreenFOVY = ptTransContext->vScreenFOVX;
+
+        .set_vscreenoriginx:
+        fld     dword[PATCH_TEMP_ADDR] ;ptTransContext->vScreenOriginX = RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vX:0x00BCABB8
+        .fixup2 = $-4
+        fadd    dword[PATCH_TEMP_ADDR] ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth:0x00BCABC8
+        .fixup3 = $-4
+        fstp    dword[ebx+50h] ; ptTransContext->vScreenOriginX = RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vX + RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth;
+
+        .set_vscreenoriginy:
+        fld     dword[PATCH_TEMP_ADDR] ;ptTransContext->vScreenOriginX = RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vY:0x00BCABBC
+        .fixup4 = $-4
+        fadd    dword[PATCH_TEMP_ADDR] ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfHeight:0x00BCABCC
+        .fixup5 = $-4
+        fstp    dword[ebx+54h] ; ptTransContext->vScreenOriginY = RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vY + RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfHeight;
+
+        .set_isdraw:
+        mov     dword[ebx+58h],1 ; ptTransContext->isDraw = 1;
+
+        .set_elayer:
+        mov     dword[ebx+60h],1 ; ptTransContext->eLayer = isDrawTRANSCONTEXT_LAYER_MIDDLE;
+
+        .end:
+        pop     edi
+        pop     esi
+        pop     ebx
+        add     esp,28h
+        retn    0
+
+loc_49E02E: ; Direct3DRender_DrawRigidMesh
+
+        .var224 = -224h
+        .tNewTransContext = -190h
+        .tNewTransContext.vFOVX = -190h+40h
+        .tNewTransContext.vFOVY = -190h+44h
+        .tNewTransContext.vScreenFOVX = -190h+48h
+        .tNewTransContext.vScreenFOVY = -190h+4Ch
+        .tNewTransContext.eLayer = -190h+60h
+
+        .get_vfovx:
+        mov     eax,dword[ebx+0ECh]
+        fld     dword[PATCH_TEMP_ADDR+eax*4] ;Mesh3D_avOverrideFOV:0x00B81700
+        .fixup1 = $-4
+        fstp    dword[esp+238h+.var224]
+
+        .set_vfovx:
+        call    Display_GetRelAspectRatio
+        fmul    dword[esp+238h+.var224]
+        fstp    dword[esp+238h+.tNewTransContext.vFOVX]
+
+        .set_vfovy:
+        fld     dword[Display_vAspectRatio34]
+        fmul    dword[esp+238h+.var224]
+        fstp    dword[esp+238h+.tNewTransContext.vFOVY]
+
+        .set_vscreenfovx:
+        fld     dword[PATCH_TEMP_ADDR] ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth:0x00BCABC8
+        .fixup2 = $-4
+        fdiv    dword[esp+238h+.tNewTransContext.vFOVX]
+        fstp    dword[esp+238h+.tNewTransContext.vScreenFOVX]
+
+        .set_vscreenfovy:
+        fld     dword[esp+238h+.tNewTransContext.vScreenFOVX]
+        fstp    dword[esp+238h+.tNewTransContext.vScreenFOVY]
+
+        .set_elayer:
+        mov     dword[esp+238h+.tNewTransContext.eLayer],0 ; tNewTransContext.eLayer = TRANSCONTEXT_LAYER_FRONT;
+
+        .set_context:
+        lea     ecx,[esp+238h+.tNewTransContext]
+        push    ecx
+        call    near PATCH_TEMP_PROC ;TransContext_SetActiveTransContext:0x00497E70
+        .fixup3 = $-4
+        add     esp,4
 
         .back:
-        jmp     near PATCH_TEMP_PROC ;loc_48285F
+        jmp     near PATCH_TEMP_PROC ;loc_49E0B1
+        .fixup4 = $-4
+
+loc_49F00D: ; Direct3DRender_DrawSortedFaceGroup_Rigid
+
+        .var244 = -244h
+        .tNewTransContext = -224h
+        .tNewTransContext.vFOVX = -224h+40h
+        .tNewTransContext.vFOVY = -224h+44h
+        .tNewTransContext.vScreenFOVX = -224h+48h
+        .tNewTransContext.vScreenFOVY = -224h+4Ch
+        .tNewTransContext.eLayer = -224h+60h
+        .tOldTransContext = -13Ch
+
+        .copy_context1:
+        mov     ecx,42
+        mov     esi,PATCH_TEMP_ADDR ;TransContext_tActiveTransContext:0x00BCAAE0
+        .fixup1 = $-4
+        lea     edi,[esp+298h+.tOldTransContext]
+        rep     movsd
+
+        .copy_context2:
+        mov     ecx,42
+        lea     esi,[esp+298h+.tOldTransContext]
+        lea     edi,[esp+298h+.tNewTransContext]
+        rep     movsd
+
+        .get_vfovx:
+        fld     dword[PATCH_TEMP_ADDR] ;Mesh3D_avOverrideFOV:0x00B81700
+        .fixup2 = $-4
+        fstp    dword[esp+298h+.var244]
+
+        .set_vfovx:
+        call    Display_GetRelAspectRatio
+        fmul    dword[esp+298h+.var244]
+        fstp    dword[esp+298h+.tNewTransContext.vFOVX]
+
+        .set_vfovy:
+        fld     dword[Display_vAspectRatio34]
+        fmul    dword[esp+298h+.var244]
+        fstp    dword[esp+298h+.tNewTransContext.vFOVY]
+
+        .set_vscreenfovx:
+        fld     dword[PATCH_TEMP_ADDR] ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth:0x00BCABC8
+        .fixup3 = $-4
+        fdiv    dword[esp+298h+.tNewTransContext.vFOVX]
+        fstp    dword[esp+298h+.tNewTransContext.vScreenFOVX]
+
+        .set_vscreenfovy:
+        fld     dword[esp+298h+.tNewTransContext.vScreenFOVX]
+        fstp    dword[esp+298h+.tNewTransContext.vScreenFOVY]
+
+        .set_elayer:
+        mov     dword[esp+298h+.tNewTransContext.eLayer],0 ; tNewTransContext.eLayer = TRANSCONTEXT_LAYER_FRONT;
+
+        .set_context:
+        lea     eax,[esp+298h+.tNewTransContext]
+        push    eax
+        call    near PATCH_TEMP_PROC ;TransContext_SetActiveTransContext:0x00497E70
+        .fixup4 = $-4
+        add     esp,4
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_49F0A3
+        .fixup5 = $-4
+
+loc_49F5AF: ; Direct3DRender_DrawSortedFaceGroup_Lightmap
+
+        .var1AC = -1ACh
+        .tNewTransContext = -190h
+        .tNewTransContext.vFOVX = -190h+40h
+        .tNewTransContext.vFOVY = -190h+44h
+        .tNewTransContext.vScreenFOVX = -190h+48h
+        .tNewTransContext.vScreenFOVY = -190h+4Ch
+        .tNewTransContext.eLayer = -190h+60h
+        .tOldTransContext = -0A8h
+
+        .copy_context1:
+        mov     ecx,42
+        mov     esi,PATCH_TEMP_ADDR ;TransContext_tActiveTransContext:0x00BCAAE0
+        .fixup1 = $-4
+        lea     edi,[esp+200h+.tOldTransContext]
+        rep     movsd
+
+        .copy_context2:
+        mov     ecx,42
+        lea     esi,[esp+200h+.tOldTransContext]
+        lea     edi,[esp+200h+.tNewTransContext]
+        rep     movsd
+
+        .get_vfovx:
+        fld     dword[PATCH_TEMP_ADDR] ;Mesh3D_avOverrideFOV:0x00B81700
+        .fixup2 = $-4
+        fstp    dword[esp+200h+.var1AC]
+
+        .set_vfovx:
+        call    Display_GetRelAspectRatio
+        fmul    dword[esp+200h+.var1AC]
+        fstp    dword[esp+200h+.tNewTransContext.vFOVX]
+
+        .set_vfovy:
+        fld     dword[Display_vAspectRatio34]
+        fmul    dword[esp+200h+.var1AC]
+        fstp    dword[esp+200h+.tNewTransContext.vFOVY]
+
+        .set_vscreenfovx:
+        fld     dword[PATCH_TEMP_ADDR] ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth:0x00BCABC8
+        .fixup3 = $-4
+        fdiv    dword[esp+200h+.tNewTransContext.vFOVX]
+        fstp    dword[esp+200h+.tNewTransContext.vScreenFOVX]
+
+        .set_vscreenfovy:
+        fld     dword[esp+200h+.tNewTransContext.vScreenFOVX]
+        fstp    dword[esp+200h+.tNewTransContext.vScreenFOVY]
+
+        .set_elayer:
+        mov     dword[esp+200h+.tNewTransContext.eLayer],0 ; tNewTransContext.eLayer = TRANSCONTEXT_LAYER_FRONT;
+
+        .set_context:
+        lea     eax,[esp+200h+.tNewTransContext]
+        push    eax
+        call    near PATCH_TEMP_PROC ;TransContext_SetActiveTransContext:0x00497E70
+        .fixup4 = $-4
+        add     esp,4
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_49F645
+        .fixup5 = $-4
+
+loc_49F78B: ; Direct3DRender_DrawBoneMesh
+
+        .var1D4 = -1D4h
+        .tNewTransContext = -190h
+        .tNewTransContext.vFOVX = -190h+40h
+        .tNewTransContext.vFOVY = -190h+44h
+        .tNewTransContext.vScreenFOVX = -190h+48h
+        .tNewTransContext.vScreenFOVY = -190h+4Ch
+        .tNewTransContext.eLayer = -190h+60h
+
+        .get_vfovx:
+        mov     eax,dword[ebp+0D4h]
+        fld     dword[PATCH_TEMP_ADDR+eax*4] ;Mesh3D_avOverrideFOV:0x00B81700
+        .fixup1 = $-4
+        fstp    dword[esp+1E4h+.var1D4]
+
+        .set_vfovx:
+        call    Display_GetRelAspectRatio
+        fmul    dword[esp+1E4h+.var1D4]
+        fstp    dword[esp+1E4h+.tNewTransContext.vFOVX]
+
+        .set_vfovy:
+        fld     dword[Display_vAspectRatio34]
+        fmul    dword[esp+1E4h+.var1D4]
+        fstp    dword[esp+1E4h+.tNewTransContext.vFOVY]
+
+        .set_vscreenfovx:
+        fld     dword[PATCH_TEMP_ADDR] ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth:0x00BCABC8
+        .fixup2 = $-4
+        fdiv    dword[esp+1E4h+.tNewTransContext.vFOVX]
+        fstp    dword[esp+1E4h+.tNewTransContext.vScreenFOVX]
+
+        .set_vscreenfovy:
+        fld     dword[esp+1E4h+.tNewTransContext.vScreenFOVX]
+        fstp    dword[esp+1E4h+.tNewTransContext.vScreenFOVY]
+
+        .set_elayer:
+        mov     dword[esp+1E4h+.tNewTransContext.eLayer],0 ; tNewTransContext.eLayer = TRANSCONTEXT_LAYER_FRONT;
+
+        .set_context:
+        lea     ecx,[esp+1E4h+.tNewTransContext]
+        push    ecx
+        call    near PATCH_TEMP_PROC ;TransContext_SetActiveTransContext:0x00497E70
+        .fixup3 = $-4
+        add     esp,4
+
+        .back:
+        mov     esi,dword[esp+1E4h-1CCh]
+        jmp     near PATCH_TEMP_PROC ;loc_49F80F
+        .fixup4 = $-4
+
+loc_4675E6: ; ComputerObject_ProjectRotatedPos
+
+        .vOOZ = 8h
+
+        call    Display_GetInvAspectRatio
+        fmul    dword[esp+8+.vOOZ]
+        fmul    dword[esi]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4675EC
+        .fixup1 = $-4
+
+loc_4676B0: ; ComputerObject_ProjectWorldPos
+
+        .vOOZ = 10h
+        .Real32x3_Rotate_tTemp = -0Ch
+
+        call    Display_GetInvAspectRatio
+        fmul    dword[esp+10h+.vOOZ]
+        fmul    dword[esp+10h+.Real32x3_Rotate_tTemp]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4676B8
+        .fixup1 = $-4
+
+loc_46A550: ; ComputerMap_Trace
+
+        .vAspect = -100h
+        .var_FC = -0FCh
+
+        fmul    dword[esp+128h+.vAspect]
+        fmul    dword[ebp+40h]
+        fstp    qword[esp+128h+.var_FC]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_46A557
+        .fixup1 = $-4
+
+loc_46BD84: ; Computer_RunHandler
+
+        call    Display_GetRelAspectRatio
+        fstp    dword[esi+98h]
+
+        .back:
+        fld     dword[esi+10Ch]
+        jmp     near PATCH_TEMP_PROC ;loc_46BD8A
         .fixup1 = $-4
 
 ;--------------------------------------------------
@@ -975,3 +1265,239 @@ loc_48F6D8: ; WinMain
         lea     eax,[esp+49Ch-464h]
         jmp     near PATCH_TEMP_PROC ;loc_48F6E0
         .fixup2 = $-4
+
+;--------------------------------------------------
+; custom main menu resolution
+;--------------------------------------------------
+
+proc GetMainMenuResolution
+
+        mov     ecx,dword[ini_sett_mainmenuresx]
+        mov     edx,dword[ini_sett_mainmenuresy]
+
+        .check_mirrored:
+        cmp     ecx,-1
+        jne     .check_valid
+        cmp     edx,-1
+        jne     .check_valid
+
+        .set_mirrored:
+        xor     eax,eax
+        and     ecx,eax
+        and     edx,eax
+        ret
+
+        .check_valid:
+        cmp     ecx,640
+        jl      .set_default
+        cmp     edx,480
+        jl      .set_default
+
+        .set_valid:
+        mov     eax,1
+        ret
+
+        .set_default:
+        mov     eax,1
+        mov     ecx,640
+        mov     edx,480
+        ret
+endp
+
+loc_418B38: ; MenuManager_New
+
+        cmp     dword[Display_CustomMMRes],0
+        je      .get_mode_mirrored
+
+        .get_mode_custom:
+        mov     eax,dword[Display_MMResWidth]
+        mov     ecx,dword[Display_MMResHeight]
+        mov     edx,dword[ebx+14h]
+        jmp     .set_mode
+
+        .get_mode_mirrored:
+        mov     eax,dword[ebx+0Ch]
+        mov     ecx,dword[ebx+10h]
+        mov     edx,dword[ebx+14h]
+
+        .set_mode:
+        mov     dword[esp+130h-118h],eax ;tDisplayMode.nWidth
+        mov     dword[esp+130h-114h],ecx ;tDisplayMode.nHeight
+        mov     dword[esp+130h-10Ch],edx ;tDisplayMode.nBitsPerPixel
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_418B50
+        .fixup1 = $-4
+
+loc_418BDF: ; MenuManager_New
+
+        add     esp,4*2
+        push    edx
+        call    near PATCH_TEMP_PROC ;Display_SetMode:0x00491A90
+        .fixup1 = $-4
+        add     esp,4
+        push    0
+        push    0
+        push    0
+        call    near PATCH_TEMP_PROC ;Display_SetBackgroundColourFn:0x00491E70
+        .fixup2 = $-4
+        add     esp,4*3
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_418BE8
+        .fixup3 = $-4
+
+loc_421AB9: ; MenuScreen_UpdateInternalDataHandler
+
+        .set_eu_width_offset:
+        mov     dword[PATCH_TEMP_ADDR],18 ;dword_57BC0C:0x0057BC0C
+        .fixup1 = $-4-4
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_421AE2
+        .fixup2 = $-4
+
+loc_421AEC: ; MenuScreen_UpdateInternalDataHandler
+
+        .get_logo_width:
+        ;mov     eax,dword[esi+98h]
+        push    eax
+        call    near PATCH_TEMP_PROC ;Picture_GetWidth:0x004B6E70
+        .fixup1 = $-4
+        add     esp,4
+        mov     dword[esp+10h+4],eax
+        fild    dword[esp+10h+4]
+        fmul    dword[PATCH_TEMP_ADDR] ;flt_533504:0x00533504
+        .fixup2 = $-4
+        fistp   dword[esp+10h-8] ;nLogoHalfWidth
+
+        .get_logo_posx:
+        call    near PATCH_TEMP_PROC ;Display_GetActiveMode:0x00491CF0
+        .fixup3 = $-4
+        mov     eax,dword[eax+4]
+        sar     eax,1
+        add     eax,dword[PATCH_TEMP_ADDR] ;dword_57BC0C:0x0057BC0C
+        .fixup4 = $-4
+        sub     eax,dword[esp+10h-8] ;nLogoHalfWidth
+        mov     dword[esp+10h+4],eax
+        fild    dword[esp+10h+4]
+
+        .update_logo_posx:
+        mov     eax,dword[esi+98h]
+        fstp    dword[eax+4]
+
+        .get_logo_height:
+        mov     eax,dword[esi+98h]
+        push    eax
+        call    near PATCH_TEMP_PROC ;Picture_GetHeight:0x004B6E80
+        .fixup5 = $-4
+        add     esp,4
+        mov     dword[esp+10h+4],eax
+        fild    dword[esp+10h+4]
+        fmul    dword[PATCH_TEMP_ADDR] ;flt_533504:0x00533504
+        .fixup6 = $-4
+        fistp   dword[esp+10h-8] ;nLogoHalfHeight
+
+        .get_logo_posy:
+        call    near PATCH_TEMP_PROC ;Display_GetActiveMode:0x00491CF0
+        .fixup7 = $-4
+        mov     eax,dword[eax+8]
+        sar     eax,1
+        sub     eax,(480/2)+40 ;nLogoOffsetY
+        add     eax,dword[esp+10h-8] ;nLogoHalfHeight
+        mov     dword[esp+10h+4],eax
+        fild    dword[esp+10h+4]
+
+        .update_logo_posy:
+        mov     eax,dword[esi+98h]
+        fstp    dword[eax+8]
+
+        .set_logo_unknown:
+        mov     edx,dword[esi+98h]
+        mov     dword[edx+20h],edi
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_421B53
+        .fixup8 = $-4
+
+loc_4192E0: ; BackgroundFX_CreateMatrix
+
+        .adjust_posx:
+        fld     dword[esp+10h]
+        mov     eax,dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nWidth:0x00C28B44
+        .fixup1 = $-4
+        sar     eax,1
+        sub     eax,(640/2) ;nHalfWidth
+        mov     dword[esp+10h],eax
+        fiadd   dword[esp+10h]
+        fstp    dword[esp+10h]
+
+        .adjust_posy:
+        fld     dword[esp+14h]
+        mov     eax,dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nHeight:0x00C28B48
+        .fixup2 = $-4
+        sar     eax,1
+        sub     eax,(480/2) ;nHalfHeight
+        mov     dword[esp+14h],eax
+        fiadd   dword[esp+14h]
+        fstp    dword[esp+14h]
+
+        .back:
+        fld     dword[esp+8]
+        fcos
+        jmp     near PATCH_TEMP_PROC ;loc_4192E6
+        .fixup3 = $-4
+
+loc_41A8A4: ; TypeWriterBox_DrawHandler
+
+        mov     dword[esi+1Ch],ecx
+        fstp    dword[esi+8]
+
+        .adjust_posx:
+        fld     dword[esi+4]
+        mov     eax,dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nWidth:0x00C28B44
+        .fixup1 = $-4
+        sar     eax,1
+        sub     eax,(640/2) ;nHalfWidth
+        mov     dword[esi+4],eax
+        fiadd   dword[esi+4]
+        fstp    dword[esi+4]
+
+        .adjust_posy:
+        fld     dword[esi+8]
+        mov     eax,dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nHeight:0x00C28B48
+        .fixup2 = $-4
+        sar     eax,1
+        sub     eax,(480/2) ;nHalfHeight
+        mov     dword[esi+8],eax
+        fiadd   dword[esi+8]
+        fstp    dword[esi+8]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_41A8AA
+        .fixup3 = $-4
+
+loc_41D7A3: ; InputBox_Draw
+
+        .adjust_posx:
+        mov     eax,dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nWidth:0x00C28B44
+        .fixup1 = $-4
+        sar     eax,1
+        sub     eax,(640/2) ;nHalfWidth
+        add     eax,dword[esi+20h]
+        add     eax,2
+        mov     dword[esp+1A4h-190h],eax
+
+        .adjust_posy:
+        mov     eax,dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nHeight:0x00C28B48
+        .fixup2 = $-4
+        sar     eax,1
+        sub     eax,(480/2) ;nHalfHeight
+        add     eax,dword[esi+24h]
+        add     eax,2
+        mov     dword[esp+1A4h-194h],eax
+
+        .back:
+        lea     edi,dword[esi+54h]
+        jmp     near PATCH_TEMP_PROC ;loc_41D7BA
+        .fixup3 = $-4

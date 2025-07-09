@@ -1,3 +1,6 @@
+;--------------------------------------------------
+; version detection stuff
+
 num_version_ids         dd 3
 
 build_id0_addr          dd 0x00541ECC
@@ -12,6 +15,7 @@ build_id1_cstr          db 'IGIMUTEX',0
 build_id2_cstr          db 'IGIMUTEX',0
 
 ;--------------------------------------------------
+; ini file stuff
 
 sec_main                du 'Main',0
 key_enable              du 'EnableIGIPatch',0
@@ -34,6 +38,13 @@ key_widescreen          du 'WidescreenPatch',0
 def_widescreen          dd 1
 key_debugpatch          du 'EnableDebugFeatures',0
 def_debugpatch          dd 1
+key_mainmenures         du 'CustomMainMenuResolution',0
+def_mainmenures         dd 1
+
+key_mainmenuresx        du 'MainMenuResolutionX',0
+def_mainmenuresx        dd -1
+key_mainmenuresy        du 'MainMenuResolutionY',0
+def_mainmenuresy        dd -1
 
 ;--------------------------------------------------
 ; Improved timer resolution
@@ -56,6 +67,12 @@ cstrBorderless          db 'Borderless',0
 ;--------------------------------------------------
 
 cstrGetBPPError         db 'Failed to retrieve screen BPP.',0
+
+;--------------------------------------------------
+; widescreen patch
+;--------------------------------------------------
+
+Display_vAspectRatio34  dd 0.75 ; 3.0 / 4.0
 
 ;--------------------------------------------------
 ; debug patch

@@ -99,17 +99,11 @@ proc ApplyPatches_ID2 ; IGI.exe v1.0 (region: japan)
         je      .borderless
 
         ; fix cursor precision in fullscreen for menus
-        stdcall GetRealAddress,PMI_IGIExe,0x004248B0
-        stdcall MPatchAddress,eax,Cursor_RunHandler,0
+        stdcall GetRealAddress,PMI_IGIExe,0x00582168 ;Cursor_nMouseX
+        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup1,eax,0
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x00C2944C ;Mouse_tMouse.bButton
-        stdcall MPatchAddress,Cursor_RunHandler.fixup1,eax,0
-        and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x00C29004 ;Display_tActiveMode.nWidth
-        stdcall MPatchAddress,Cursor_UpdatePosition.fixup1,eax,0
-        and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x00C29008 ;Display_tActiveMode.nHeight
-        stdcall MPatchAddress,Cursor_UpdatePosition.fixup2,eax,0
+        stdcall GetRealAddress,PMI_IGIExe,0x0058216C ;Cursor_nMouseY
+        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup2,eax,0
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x005C80F4 ;AppContext_tAppContext.hWnd
         stdcall MPatchAddress,Cursor_CalcCursorPos.fixup1,eax,0
@@ -117,23 +111,29 @@ proc ApplyPatches_ID2 ; IGI.exe v1.0 (region: japan)
         stdcall GetRealAddress,PMI_IGIExe,0x005C8130 ;AppContext_tAppContext.isFullscreen
         stdcall MPatchAddress,Cursor_CalcCursorPos.fixup2,eax,0
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x00582168 ;Cursor_nMouseX
-        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup1,eax,0
+        stdcall GetRealAddress,PMI_IGIExe,0x00C29004 ;Display_tActiveMode.nWidth
+        stdcall MPatchAddress,Cursor_UpdatePosition.fixup1,eax,0
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x0058216C ;Cursor_nMouseY
-        stdcall MPatchAddress,Cursor_GetWindowedCursorPos.fixup2,eax,0
+        stdcall GetRealAddress,PMI_IGIExe,0x00C29008 ;Display_tActiveMode.nHeight
+        stdcall MPatchAddress,Cursor_UpdatePosition.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004248B0
+        stdcall MPatchAddress,eax,Cursor_RunHandler,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00C2944C ;Mouse_tMouse.bButton
+        stdcall MPatchAddress,Cursor_RunHandler.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x005C8130 ;AppContext_tAppContext.isFullscreen
+        stdcall MPatchAddress,Cursor_UpdateSensMult.fixup1,eax,0
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x00492029
         stdcall MPatchCodeCave,eax,loc_491BE9,0x00492032-0x00492029
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x005C8130 ;AppContext_tAppContext.isFullscreen
+        stdcall GetRealAddress,PMI_IGIExe,0x005C80F4 ;AppContext_tAppContext.hWnd
         stdcall MPatchAddress,loc_491BE9.fixup1,eax,0
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x005C80F4 ;AppContext_tAppContext.hWnd
-        stdcall MPatchAddress,loc_491BE9.fixup2,eax,0
-        and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x00492032
-        stdcall MPatchAddress,loc_491BE9.fixup3,eax,1
+        stdcall MPatchAddress,loc_491BE9.fixup2,eax,1
         and     ebx,eax
 
         .borderless:
@@ -265,11 +265,6 @@ proc ApplyPatches_ID2 ; IGI.exe v1.0 (region: japan)
         cmp     dword[ini_opts_widescreen],0
         je      .debugpatch
 
-        ; disable screen stretching
-        stdcall GetRealAddress,PMI_IGIExe,0x00492180
-        stdcall MPatchCodeCave,eax,Display_GetAspectRatio_CodeCave,0x004921A9-0x00492180
-        and     ebx,eax
-
         ; Display_SetMode - save aspect ratio
         stdcall GetRealAddress,PMI_IGIExe,0x0049207F
         stdcall MPatchCodeCave,eax,loc_491C3F,0x00492085-0x0049207F
@@ -278,36 +273,144 @@ proc ApplyPatches_ID2 ; IGI.exe v1.0 (region: japan)
         stdcall MPatchAddress,loc_491C3F.fixup1,eax,1
         and     ebx,eax
 
-        ; QCamera_Set - fix FOV
-        stdcall GetRealAddress,PMI_IGIExe,0x004DA270
-        stdcall MPatchCodeCave,eax,QCamera_Set_CodeCave,0x004DA278-0x004DA270
+        ; TransContext_Create
+        stdcall GetRealAddress,PMI_IGIExe,0x00498757
+        stdcall MPatchCodeCave,eax,TransContext_Create_CodeCave,0x004987C5-0x00498757
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x004DA278
-        stdcall MPatchAddress,QCamera_Set_CodeCave.fixup1,eax,1
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA548 ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth
+        stdcall MPatchAddress,TransContext_Create_CodeCave.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA538 ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vX
+        stdcall MPatchAddress,TransContext_Create_CodeCave.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA548 ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth
+        stdcall MPatchAddress,TransContext_Create_CodeCave.fixup3,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA53C ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vY
+        stdcall MPatchAddress,TransContext_Create_CodeCave.fixup4,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA54C ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfHeight
+        stdcall MPatchAddress,TransContext_Create_CodeCave.fixup5,eax,0
         and     ebx,eax
 
-        ; ViewportQTask_New - fix FOV
-        ;stdcall GetRealAddress,PMI_IGIExe,0x004E8A10
-        ;stdcall MPatchCodeCave,eax,ViewportQTask_New_CodeCave,0x004E8A18-0x004E8A10
-        ;and     ebx,eax
-        ;stdcall GetRealAddress,PMI_IGIExe,0x004E8A00 ;sub_4E8100
-        ;stdcall MPatchAddress,ViewportQTask_New_CodeCave.fixup1,eax,1
-        ;and     ebx,eax
-        ;stdcall GetRealAddress,PMI_IGIExe,0x004E8A18
-        ;stdcall MPatchAddress,ViewportQTask_New_CodeCave.fixup2,eax,1
-        ;and     ebx,eax
-
-        ; HumanCamera_RunHandler - fix object FOV
-        stdcall GetRealAddress,PMI_IGIExe,0x004827E9
-        stdcall MPatchCodeCave,eax,loc_482859,0x004827EF-0x004827E9
+        ; Direct3DRender_DrawRigidMesh
+        stdcall GetRealAddress,PMI_IGIExe,0x0049E9AE
+        stdcall MPatchCodeCave,eax,loc_49E02E,0x0049EA31-0x0049E9AE
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x004827EF
-        stdcall MPatchAddress,loc_482859.fixup1,eax,1
+        stdcall GetRealAddress,PMI_IGIExe,0x00B81080 ;Mesh3D_avOverrideFOV
+        stdcall MPatchAddress,loc_49E02E.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA548 ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth
+        stdcall MPatchAddress,loc_49E02E.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004987E0 ;TransContext_SetActiveTransContext
+        stdcall MPatchAddress,loc_49E02E.fixup3,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0049EA31
+        stdcall MPatchAddress,loc_49E02E.fixup4,eax,1
+        and     ebx,eax
+
+        ; Direct3DRender_DrawSortedFaceGroup_Rigid
+        stdcall GetRealAddress,PMI_IGIExe,0x0049F98D
+        stdcall MPatchCodeCave,eax,loc_49F00D,0x0049FA23-0x0049F98D
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA460 ;TransContext_tActiveTransContext
+        stdcall MPatchAddress,loc_49F00D.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00B81080 ;Mesh3D_avOverrideFOV
+        stdcall MPatchAddress,loc_49F00D.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA548 ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth
+        stdcall MPatchAddress,loc_49F00D.fixup3,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004987E0 ;TransContext_SetActiveTransContext
+        stdcall MPatchAddress,loc_49F00D.fixup4,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0049FA23
+        stdcall MPatchAddress,loc_49F00D.fixup5,eax,1
+        and     ebx,eax
+
+        ; Direct3DRender_DrawSortedFaceGroup_Lightmap
+        stdcall GetRealAddress,PMI_IGIExe,0x0049FF2F
+        stdcall MPatchCodeCave,eax,loc_49F5AF,0x0049FFC5-0x0049FF2F
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA460 ;TransContext_tActiveTransContext
+        stdcall MPatchAddress,loc_49F5AF.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00B81080 ;Mesh3D_avOverrideFOV
+        stdcall MPatchAddress,loc_49F5AF.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA548 ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth
+        stdcall MPatchAddress,loc_49F5AF.fixup3,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004987E0 ;TransContext_SetActiveTransContext
+        stdcall MPatchAddress,loc_49F5AF.fixup4,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0049FFC5
+        stdcall MPatchAddress,loc_49F5AF.fixup5,eax,1
+        and     ebx,eax
+
+        ; Direct3DRender_DrawBoneMesh
+        stdcall GetRealAddress,PMI_IGIExe,0x004A010B
+        stdcall MPatchCodeCave,eax,loc_49F78B,0x004A018F-0x004A010B
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00B81080 ;Mesh3D_avOverrideFOV
+        stdcall MPatchAddress,loc_49F78B.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCA548 ;RenderContext_tActiveRenderContext.tClippingWindow.tClippingRect.vHalfWidth
+        stdcall MPatchAddress,loc_49F78B.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004987E0 ;TransContext_SetActiveTransContext
+        stdcall MPatchAddress,loc_49F78B.fixup3,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004A018F
+        stdcall MPatchAddress,loc_49F78B.fixup4,eax,1
+        and     ebx,eax
+
+        ; ComputerObject_ProjectRotatedPos
+        stdcall GetRealAddress,PMI_IGIExe,0x004671B6
+        stdcall MPatchCodeCave,eax,loc_4675E6,0x004671BC-0x004671B6
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004671BC
+        stdcall MPatchAddress,loc_4675E6.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004671C1
+        stdcall MPatchAddress,eax,Display_GetInvAspectRatio,1
+        and     ebx,eax
+
+        ; ComputerObject_ProjectWorldPos
+        stdcall GetRealAddress,PMI_IGIExe,0x00467280
+        stdcall MPatchCodeCave,eax,loc_4676B0,0x00467288-0x00467280
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00467288
+        stdcall MPatchAddress,loc_4676B0.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0046729F
+        stdcall MPatchAddress,eax,Display_GetInvAspectRatio,1
+        and     ebx,eax
+
+        ; ComputerMap_Trace
+        stdcall GetRealAddress,PMI_IGIExe,0x0046A0A2
+        stdcall MPatchAddress,eax,Display_GetRelAspectRatio,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0046A0C0
+        stdcall MPatchCodeCave,eax,loc_46A550,0x0046A0C7-0x0046A0C0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0046A0C7
+        stdcall MPatchAddress,loc_46A550.fixup1,eax,1
+        and     ebx,eax
+
+        ; Computer_RunHandler - set scalex to Display_GetAspectRatio()
+        stdcall GetRealAddress,PMI_IGIExe,0x0046B8F4
+        stdcall MPatchCodeCave,eax,loc_46BD84,0x0046B8FA-0x0046B8F4
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0046B8FA
+        stdcall MPatchAddress,loc_46BD84.fixup1,eax,1
         and     ebx,eax
 
         .debugpatch:
         cmp     dword[ini_opts_debugpatch],0
-        je      .end
+        je      .mainmenures
 
         ; init debug command-line params
         stdcall GetRealAddress,PMI_IGIExe,0x0048FAA4
@@ -363,6 +466,119 @@ proc ApplyPatches_ID2 ; IGI.exe v1.0 (region: japan)
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x0048901A
         stdcall MPatchByte,eax,0
+        and     ebx,eax
+
+        .mainmenures:
+        cmp     dword[ini_opts_mainmenures],0
+        je      .end
+
+        stdcall GetMainMenuResolution
+        mov     dword[Display_CustomMMRes],eax
+        mov     dword[Display_MMResWidth],ecx
+        mov     dword[Display_MMResHeight],edx
+
+        ; MenuManager_New - custom main menu resolution
+        stdcall GetRealAddress,PMI_IGIExe,0x004185B8
+        stdcall MPatchCodeCave,eax,loc_418B38,0x004185D0-0x004185B8
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004185D0
+        stdcall MPatchAddress,loc_418B38.fixup1,eax,1
+        and     ebx,eax
+
+        ; MenuManager_New - fix background color
+        stdcall GetRealAddress,PMI_IGIExe,0x0041865F
+        stdcall MPatchCodeCave,eax,loc_418BDF,0x00418668-0x0041865F
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00491ED0
+        stdcall MPatchAddress,loc_418BDF.fixup1,eax,1 ;Display_SetMode
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004922B0 ;Display_SetBackgroundColourFn
+        stdcall MPatchAddress,loc_418BDF.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00418668
+        stdcall MPatchAddress,loc_418BDF.fixup3,eax,1
+        and     ebx,eax
+
+        ; MenuScreen_UpdateInternalDataHandler - fix decentered EU logo
+        stdcall GetRealAddress,PMI_IGIExe,0x004216B9
+        stdcall MPatchCodeCave,eax,loc_421AB9,0x004216C1-0x004216B9
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00582110 ;dword_57BC0C
+        stdcall MPatchAddress,loc_421AB9.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004216E2
+        stdcall MPatchAddress,loc_421AB9.fixup2,eax,1
+        and     ebx,eax
+
+        ; MenuScreen_UpdateInternalDataHandler - fix logo position
+        stdcall GetRealAddress,PMI_IGIExe,0x004216EC
+        stdcall MPatchCodeCave,eax,loc_421AEC,0x00421753-0x004216EC
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004B7820 ;Picture_GetWidth
+        stdcall MPatchAddress,loc_421AEC.fixup1,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0053353C ;flt_533504
+        stdcall MPatchAddress,loc_421AEC.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00492130 ;Display_GetActiveMode
+        stdcall MPatchAddress,loc_421AEC.fixup3,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00582110 ;dword_57BC0C
+        stdcall MPatchAddress,loc_421AEC.fixup4,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004B7830 ;Picture_GetHeight
+        stdcall MPatchAddress,loc_421AEC.fixup5,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0053353C ;flt_533504
+        stdcall MPatchAddress,loc_421AEC.fixup6,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00492130 ;Display_GetActiveMode
+        stdcall MPatchAddress,loc_421AEC.fixup7,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00421753
+        stdcall MPatchAddress,loc_421AEC.fixup8,eax,1
+        and     ebx,eax
+
+        ; BackgroundFX_CreateMatrix - fix background fx position
+        stdcall GetRealAddress,PMI_IGIExe,0x0041C3F0
+        stdcall MPatchCodeCave,eax,loc_4192E0,0x0041C3F6-0x0041C3F0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00C29004 ;Display_tActiveMode.nWidth
+        stdcall MPatchAddress,loc_4192E0.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00C29008 ;Display_tActiveMode.nHeight
+        stdcall MPatchAddress,loc_4192E0.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0041C3F6
+        stdcall MPatchAddress,loc_4192E0.fixup3,eax,1
+        and     ebx,eax
+
+        ; TypeWriterBox_DrawHandler - fix credits rect position
+        stdcall GetRealAddress,PMI_IGIExe,0x0041D934
+        stdcall MPatchCodeCave,eax,loc_41A8A4,0x0041D93A-0x0041D934
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00C29004 ;Display_tActiveMode.nWidth
+        stdcall MPatchAddress,loc_41A8A4.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00C29008 ;Display_tActiveMode.nHeight
+        stdcall MPatchAddress,loc_41A8A4.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0041D93A
+        stdcall MPatchAddress,loc_41A8A4.fixup3,eax,1
+        and     ebx,eax
+
+        ; InputBox_Draw - fix input boxes position
+        stdcall GetRealAddress,PMI_IGIExe,0x00419283
+        stdcall MPatchCodeCave,eax,loc_41D7A3,0x0041929A-0x00419283
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00C29004 ;Display_tActiveMode.nWidth
+        stdcall MPatchAddress,loc_41D7A3.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00C29008 ;Display_tActiveMode.nHeight
+        stdcall MPatchAddress,loc_41D7A3.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x0041929A
+        stdcall MPatchAddress,loc_41D7A3.fixup3,eax,1
         and     ebx,eax
 
         .end:

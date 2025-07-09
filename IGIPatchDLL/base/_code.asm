@@ -100,6 +100,14 @@ proc ReadIniSettings
         mov     dword[ini_opts_widescreen],eax
         invoke  GetPrivateProfileInt,sec_options,key_debugpatch,dword[def_debugpatch],ebx
         mov     dword[ini_opts_debugpatch],eax
+        invoke  GetPrivateProfileInt,sec_options,key_mainmenures,dword[def_mainmenures],ebx
+        mov     dword[ini_opts_mainmenures],eax
+
+        ; settings
+        invoke  GetPrivateProfileInt,key_mainmenures,key_mainmenuresx,dword[def_mainmenuresx],ebx
+        mov     dword[ini_sett_mainmenuresx],eax
+        invoke  GetPrivateProfileInt,key_mainmenures,key_mainmenuresy,dword[def_mainmenuresy],ebx
+        mov     dword[ini_sett_mainmenuresy],eax
 
         pop     ebx
         ret
