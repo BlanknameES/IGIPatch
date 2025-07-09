@@ -13,7 +13,7 @@ Individual features of the patch can be tweaked by editing the file 'IGIPatch.in
 - American
 - Japanese
 
-# Current feature list - v0.40 (updated 2025-06-23)
+# Current feature list - v0.50 (updated 2025-07-09)
 - CD check removal.
 - Improved timer resolution (beyond microseconds).
 - Fixed windows cursor being visible in windowed mode.
@@ -24,7 +24,7 @@ Individual features of the patch can be tweaked by editing the file 'IGIPatch.in
 - Fixed Resolution listbox showing a wrong display mode; Resolution limit raised from 8192x8192x32 to 65536x65536.
 - Added widescreen support; Screen stretching is disabled and FOV is automatically adjusted.
 - Added debug features via command-line arguments: NoLightmaps, NoTerrainLightmaps, DebugText, Debug, Small, DebugKeys.
-- Updated Borderless window mode:  Fixed incorrect background size for the loading screen; optimized cursor handling code.
+- Disabled the hard-coded 640x480x16 mode set in the main menu. Main menu resolution can be set in the INI file.
 
 # Known issues
 1. Intro videos not playing:
