@@ -40,11 +40,18 @@ key_debugpatch          du 'EnableDebugFeatures',0
 def_debugpatch          dd 1
 key_mainmenures         du 'CustomMainMenuResolution',0
 def_mainmenures         dd 1
+key_dpiawareness        du 'SetDPIAwareness',0
+def_dpiawareness        dd 1
 
-key_mainmenuresx        du 'MainMenuResolutionX',0
+key_resolutionsbpp      du 'ScreenBPP',0
+def_resolutionsbpp      dd -1
+
+key_mainmenuresx        du 'MainMenuScreenWidth',0
 def_mainmenuresx        dd -1
-key_mainmenuresy        du 'MainMenuResolutionY',0
+key_mainmenuresy        du 'MainMenuScreenHeight',0
 def_mainmenuresy        dd -1
+key_mainmenuresbpp      du 'MainMenuScreenBPP',0
+def_mainmenuresbpp      dd -1
 
 ;--------------------------------------------------
 ; Improved timer resolution
@@ -73,6 +80,7 @@ cstrGetBPPError         db 'Failed to retrieve screen BPP.',0
 ;--------------------------------------------------
 
 Display_vAspectRatio34  dd 0.75 ; 3.0 / 4.0
+Display_vAspectRatio43  dd 1.3333334 ; 4.0 / 3.0
 
 ;--------------------------------------------------
 ; debug patch

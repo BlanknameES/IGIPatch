@@ -1,10 +1,16 @@
-proc ApplyPatches_ID0 ; IGI.exe v1.0 (region: europe)
+proc ApplyPatches_ID0 ; IGI.exe v1.0 (Region: Europe)
 
         push    ebx
         mov     ebx,1
 
         ; workaround for undefined symbol error
         mov     eax,PatchTrap
+
+        .dpiawareness: ; high priority
+        cmp     dword[ini_opts_dpiawareness],0
+        je      .nocdcheck
+
+        stdcall SetDPIAwareness
 
         .nocdcheck:
         cmp     dword[ini_opts_nocdcheck],0
@@ -197,8 +203,7 @@ proc ApplyPatches_ID0 ; IGI.exe v1.0 (region: europe)
         cmp     dword[ini_opts_resolutions],0
         je      .widescreen
 
-        stdcall GetScreenBitsPerPixel
-        mov     dword[Config_nScreenBPP],eax
+        stdcall SetScreenColorDepth
 
         ; rewrite Config_EnumDisplayModeCB
         stdcall GetRealAddress,PMI_IGIExe,0x0040362E
@@ -408,6 +413,120 @@ proc ApplyPatches_ID0 ; IGI.exe v1.0 (region: europe)
         stdcall MPatchAddress,loc_46BD84.fixup1,eax,1
         and     ebx,eax
 
+        ; Mesh3D_GetRigidMeshLOD - fix rendering distance
+        stdcall GetRealAddress,PMI_IGIExe,0x004CFE74
+        stdcall MPatchCodeCave,eax,loc_4CFE74,0x004CFE7A-0x004CFE74
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4CFE74.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004CFE7A
+        stdcall MPatchAddress,loc_4CFE74.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004CFE95
+        stdcall MPatchCodeCave,eax,loc_4CFE95,0x004CFE9B-0x004CFE95
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4CFE95.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004CFE9B
+        stdcall MPatchAddress,loc_4CFE95.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004CFEB2
+        stdcall MPatchCodeCave,eax,loc_4CFEB2,0x004CFEB8-0x004CFEB2
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4CFEB2.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004CFEB8
+        stdcall MPatchAddress,loc_4CFEB2.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004CFEF2
+        stdcall MPatchCodeCave,eax,loc_4CFEF2,0x004CFEF8-0x004CFEF2
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4CFEF2.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004CFEF8
+        stdcall MPatchAddress,loc_4CFEF2.fixup2,eax,1
+        and     ebx,eax
+
+        ; Mesh3D_GetBoneMeshLOD - fix rendering distance
+        stdcall GetRealAddress,PMI_IGIExe,0x004D0097
+        stdcall MPatchCodeCave,eax,loc_4D0097,0x004D009D-0x004D0097
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4D0097.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D009D
+        stdcall MPatchAddress,loc_4D0097.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D00B7
+        stdcall MPatchCodeCave,eax,loc_4D00B7,0x004D00BD-0x004D00B7
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4D00B7.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D00BD
+        stdcall MPatchAddress,loc_4D00B7.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D00D4
+        stdcall MPatchCodeCave,eax,loc_4D00D4,0x004D00DA-0x004D00D4
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4D00D4.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D00DA
+        stdcall MPatchAddress,loc_4D00D4.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D010A
+        stdcall MPatchCodeCave,eax,loc_4D010A,0x004D0110-0x004D010A
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4D010A.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D0110
+        stdcall MPatchAddress,loc_4D010A.fixup2,eax,1
+        and     ebx,eax
+
+        ; Mesh3D_GetSplineMeshLOD - fix rendering distance
+        stdcall GetRealAddress,PMI_IGIExe,0x004D02DD
+        stdcall MPatchCodeCave,eax,loc_4D02DD,0x004D02E3-0x004D02DD
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4D02DD.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D02E3
+        stdcall MPatchAddress,loc_4D02DD.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D02FD
+        stdcall MPatchCodeCave,eax,loc_4D02FD,0x004D0303-0x004D02FD
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4D02FD.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D0303
+        stdcall MPatchAddress,loc_4D02FD.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D031A
+        stdcall MPatchCodeCave,eax,loc_4D031A,0x004D0320-0x004D031A
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4D031A.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D0320
+        stdcall MPatchAddress,loc_4D031A.fixup2,eax,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D0350
+        stdcall MPatchCodeCave,eax,loc_4D0350,0x004D0356-0x004D0350
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00BCAB24 ;TransContext_tActiveTransContext.vFOVY
+        stdcall MPatchAddress,loc_4D0350.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004D0356
+        stdcall MPatchAddress,loc_4D0350.fixup2,eax,1
+        and     ebx,eax
+
         .debugpatch:
         cmp     dword[ini_opts_debugpatch],0
         je      .mainmenures
@@ -472,10 +591,7 @@ proc ApplyPatches_ID0 ; IGI.exe v1.0 (region: europe)
         cmp     dword[ini_opts_mainmenures],0
         je      .end
 
-        stdcall GetMainMenuResolution
-        mov     dword[Display_CustomMMRes],eax
-        mov     dword[Display_MMResWidth],ecx
-        mov     dword[Display_MMResHeight],edx
+        stdcall SetMainMenuResolution
 
         ; MenuManager_New - custom main menu resolution
         stdcall GetRealAddress,PMI_IGIExe,0x00418B38
@@ -539,19 +655,25 @@ proc ApplyPatches_ID0 ; IGI.exe v1.0 (region: europe)
         stdcall MPatchAddress,loc_421AEC.fixup8,eax,1
         and     ebx,eax
 
-        ; BackgroundFX_CreateMatrix - fix background fx position
-        stdcall GetRealAddress,PMI_IGIExe,0x004192E0
-        stdcall MPatchCodeCave,eax,loc_4192E0,0x004192E6-0x004192E0
+        ; BackgroundFX_DrawAllObjects - fix background fx position/scale
+        stdcall GetRealAddress,PMI_IGIExe,0x0041989D
+        stdcall MPatchAddress,eax,BackgroundFX_CreateMatrix,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x004198ED
+        stdcall MPatchAddress,eax,BackgroundFX_CreateMatrix,1
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00419937
+        stdcall MPatchAddress,eax,BackgroundFX_CreateMatrix,1
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x00C28B44 ;Display_tActiveMode.nWidth
-        stdcall MPatchAddress,loc_4192E0.fixup1,eax,0
+        stdcall MPatchAddress,BackgroundFX_GetMatrixScaleXMul.fixup1,eax,0
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x00C28B48 ;Display_tActiveMode.nHeight
-        stdcall MPatchAddress,loc_4192E0.fixup2,eax,0
+        stdcall MPatchAddress,BackgroundFX_GetMatrixScaleYMul.fixup1,eax,0
         and     ebx,eax
-        stdcall GetRealAddress,PMI_IGIExe,0x004192E6
-        stdcall MPatchAddress,loc_4192E0.fixup3,eax,1
-        and     ebx,eax
+        ;stdcall GetRealAddress,PMI_IGIExe,0x00C28B44 ;Display_tActiveMode.nWidth
+        ;stdcall MPatchAddress,BackgroundFX_CreateMatrix.fixup1,eax,0
+        ;and     ebx,eax
 
         ; TypeWriterBox_DrawHandler - fix credits rect position
         stdcall GetRealAddress,PMI_IGIExe,0x0041A8A4
@@ -579,6 +701,25 @@ proc ApplyPatches_ID0 ; IGI.exe v1.0 (region: europe)
         and     ebx,eax
         stdcall GetRealAddress,PMI_IGIExe,0x0041D7BA
         stdcall MPatchAddress,loc_41D7A3.fixup3,eax,1
+        and     ebx,eax
+
+        ; add picture scaling function fom IGI2
+        stdcall GetRealAddress,PMI_IGIExe,0x004B53B0 ;QSprite_Register4AZ
+        stdcall MPatchAddress,Q3DPicture_RegisterSize.fixup1,eax,1
+        and     ebx,eax
+
+        ; scale main menu background picture
+        stdcall GetRealAddress,PMI_IGIExe,0x00421CB6
+        stdcall MPatchCodeCave,eax,loc_421CB6,0x00421CBF-0x00421CB6
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00C28B48 ;Display_tActiveMode.nHeight
+        stdcall MPatchAddress,loc_421CB6.fixup1,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00C28B44 ;Display_tActiveMode.nWidth
+        stdcall MPatchAddress,loc_421CB6.fixup2,eax,0
+        and     ebx,eax
+        stdcall GetRealAddress,PMI_IGIExe,0x00421CBF
+        stdcall MPatchAddress,loc_421CB6.fixup3,eax,1
         and     ebx,eax
 
         .end:

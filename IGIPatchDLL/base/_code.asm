@@ -102,12 +102,20 @@ proc ReadIniSettings
         mov     dword[ini_opts_debugpatch],eax
         invoke  GetPrivateProfileInt,sec_options,key_mainmenures,dword[def_mainmenures],ebx
         mov     dword[ini_opts_mainmenures],eax
+        invoke  GetPrivateProfileInt,sec_options,key_dpiawareness,dword[def_dpiawareness],ebx
+        mov     dword[ini_opts_dpiawareness],eax
 
-        ; settings
+        ; settings (key_resolutions)
+        invoke  GetPrivateProfileInt,key_resolutions,key_resolutionsbpp,dword[def_resolutionsbpp],ebx
+        mov     dword[ini_sett_resolutionsbpp],eax
+
+        ; settings (key_mainmenures)
         invoke  GetPrivateProfileInt,key_mainmenures,key_mainmenuresx,dword[def_mainmenuresx],ebx
         mov     dword[ini_sett_mainmenuresx],eax
         invoke  GetPrivateProfileInt,key_mainmenures,key_mainmenuresy,dword[def_mainmenuresy],ebx
         mov     dword[ini_sett_mainmenuresy],eax
+        invoke  GetPrivateProfileInt,key_mainmenures,key_mainmenuresbpp,dword[def_mainmenuresbpp],ebx
+        mov     dword[ini_sett_mainmenuresbpp],eax
 
         pop     ebx
         ret

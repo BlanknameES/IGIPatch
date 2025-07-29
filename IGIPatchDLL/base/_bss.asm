@@ -21,9 +21,13 @@ ini_opts_resolutions    rd 1
 ini_opts_widescreen     rd 1
 ini_opts_debugpatch     rd 1
 ini_opts_mainmenures    rd 1
+ini_opts_dpiawareness   rd 1
+
+ini_sett_resolutionsbpp rd 1
 
 ini_sett_mainmenuresx   rd 1
 ini_sett_mainmenuresy   rd 1
+ini_sett_mainmenuresbpp rd 1
 
 ;--------------------------------------------------
 ; Improved timer resolution

@@ -550,9 +550,21 @@ loc_48A50D:
 ; display modes patch
 ;--------------------------------------------------
 
-proc GetScreenBitsPerPixel
+proc SetScreenColorDepth
 
         push    esi edi
+
+        mov     eax,dword[ini_sett_resolutionsbpp]
+        cmp     eax,-1
+        je      .auto_detect
+        cmp     eax,16
+        jge     .end
+
+        .default:
+        mov     eax,32
+        jmp     .end
+
+        .auto_detect: ; TODO: use EnumDisplaySettings instead?
         invoke  GetDC,0
         test    eax,eax
         jz      .error
@@ -563,13 +575,16 @@ proc GetScreenBitsPerPixel
         test    eax,eax
         jz      .error
         mov     eax,edi
+
         .end:
+        mov     dword[Config_nScreenBPP],eax
         pop     edi esi
         ret
 
         .error:
         invoke  MessageBoxA,0,cstrGetBPPError,0,MB_OK+MB_ICONERROR
-        jmp     .error ; loop
+        .abort: ; IGI1 does not use abort()
+        jmp     .abort
 endp
 
 proc Config_EnumDisplayModeCB c ptDisplayMode ; fixed multiple issues: buffer overflow, incorrect signedness and invalid pointer
@@ -1139,6 +1154,126 @@ loc_46BD84: ; Computer_RunHandler
         jmp     near PATCH_TEMP_PROC ;loc_46BD8A
         .fixup1 = $-4
 
+loc_4CFE74: ; Mesh3D_GetRigidMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4CFE7A
+        .fixup2 = $-4
+
+loc_4CFE95: ; Mesh3D_GetRigidMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4CFE9B
+        .fixup2 = $-4
+
+loc_4CFEB2: ; Mesh3D_GetRigidMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4CFEB8
+        .fixup2 = $-4
+
+loc_4CFEF2: ; Mesh3D_GetRigidMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4CFEF8
+        .fixup2 = $-4
+
+loc_4D0097: ; Mesh3D_GetBoneMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4D009D
+        .fixup2 = $-4
+
+loc_4D00B7: ; Mesh3D_GetBoneMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4D00BD
+        .fixup2 = $-4
+
+loc_4D00D4: ; Mesh3D_GetBoneMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4D00DA
+        .fixup2 = $-4
+
+loc_4D010A: ; Mesh3D_GetBoneMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4D0110
+        .fixup2 = $-4
+
+loc_4D02DD: ; Mesh3D_GetSplineMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4D02E3
+        .fixup2 = $-4
+
+loc_4D02FD: ; Mesh3D_GetSplineMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4D0303
+        .fixup2 = $-4
+
+loc_4D031A: ; Mesh3D_GetSplineMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4D0320
+        .fixup2 = $-4
+
+loc_4D0350: ; Mesh3D_GetSplineMeshLOD
+
+        fld     dword[PATCH_TEMP_ADDR] ;TransContext_tActiveTransContext.vFOVY:0x00BCAB24
+        .fixup1 = $-4
+        fmul    dword[Display_vAspectRatio43]
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_4D0356
+        .fixup2 = $-4
+
 ;--------------------------------------------------
 ; debug patch
 ;--------------------------------------------------
@@ -1270,60 +1405,75 @@ loc_48F6D8: ; WinMain
 ; custom main menu resolution
 ;--------------------------------------------------
 
-proc GetMainMenuResolution
+proc SetMainMenuResolution
 
-        mov     ecx,dword[ini_sett_mainmenuresx]
-        mov     edx,dword[ini_sett_mainmenuresy]
+        mov     eax,dword[ini_sett_mainmenuresx]
+        mov     ecx,dword[ini_sett_mainmenuresy]
+        mov     edx,dword[ini_sett_mainmenuresbpp]
 
-        .check_mirrored:
+        .check_valid_width:
+        cmp     eax,-1
+        je      .check_valid_height
+        cmp     eax,640
+        jge     .check_valid_height
+        mov     eax,640
+
+        .check_valid_height:
         cmp     ecx,-1
-        jne     .check_valid
+        je      .check_valid_bpp
+        cmp     ecx,480
+        jge     .check_valid_bpp
+        mov     ecx,480
+
+        .check_valid_bpp:
         cmp     edx,-1
-        jne     .check_valid
+        je      .end
+        cmp     edx,16
+        jge     .end
+        mov     edx,16
 
-        .set_mirrored:
-        xor     eax,eax
-        and     ecx,eax
-        and     edx,eax
-        ret
-
-        .check_valid:
-        cmp     ecx,640
-        jl      .set_default
-        cmp     edx,480
-        jl      .set_default
-
-        .set_valid:
-        mov     eax,1
-        ret
-
-        .set_default:
-        mov     eax,1
-        mov     ecx,640
-        mov     edx,480
+        .end:
+        mov     dword[Display_MMResWidth],eax
+        mov     dword[Display_MMResHeight],ecx
+        mov     dword[Display_MMResBPP],edx
         ret
 endp
 
 loc_418B38: ; MenuManager_New
 
-        cmp     dword[Display_CustomMMRes],0
-        je      .get_mode_mirrored
+        .var_118 = -118h
+        .var_114 = -114h
+        .var_10C = -10Ch
 
-        .get_mode_custom:
         mov     eax,dword[Display_MMResWidth]
         mov     ecx,dword[Display_MMResHeight]
-        mov     edx,dword[ebx+14h]
-        jmp     .set_mode
+        mov     edx,dword[Display_MMResBPP]
 
-        .get_mode_mirrored:
+        .check_res_width:
+        cmp     eax,-1
+        jne     .check_res_height
+
+        .set_res_width_mirrored:
         mov     eax,dword[ebx+0Ch]
+
+        .check_res_height:
+        cmp     ecx,-1
+        jne     .check_res_bpp
+
+        .set_res_height_mirrored:
         mov     ecx,dword[ebx+10h]
+
+        .check_res_bpp:
+        cmp     edx,-1
+        jne     .set_mode
+
+        .set_res_bpp_mirrored:
         mov     edx,dword[ebx+14h]
 
         .set_mode:
-        mov     dword[esp+130h-118h],eax ;tDisplayMode.nWidth
-        mov     dword[esp+130h-114h],ecx ;tDisplayMode.nHeight
-        mov     dword[esp+130h-10Ch],edx ;tDisplayMode.nBitsPerPixel
+        mov     dword[esp+130h+.var_118],eax ;tDisplayMode.nWidth
+        mov     dword[esp+130h+.var_114],ecx ;tDisplayMode.nHeight
+        mov     dword[esp+130h+.var_10C],edx ;tDisplayMode.nBitsPerPixel
 
         .back:
         jmp     near PATCH_TEMP_PROC ;loc_418B50
@@ -1349,7 +1499,7 @@ loc_418BDF: ; MenuManager_New
 
 loc_421AB9: ; MenuScreen_UpdateInternalDataHandler
 
-        .set_eu_width_offset:
+        .set_eulogo_width_offset:
         mov     dword[PATCH_TEMP_ADDR],18 ;dword_57BC0C:0x0057BC0C
         .fixup1 = $-4-4
 
@@ -1420,33 +1570,92 @@ loc_421AEC: ; MenuScreen_UpdateInternalDataHandler
         jmp     near PATCH_TEMP_PROC ;loc_421B53
         .fixup8 = $-4
 
-loc_4192E0: ; BackgroundFX_CreateMatrix
+proc BackgroundFX_GetMatrixScaleXMul c
 
-        .adjust_posx:
-        fld     dword[esp+10h]
-        mov     eax,dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nWidth:0x00C28B44
+        locals
+                vOldWidth dd 640.0
+        endl
+
+        fild    dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nWidth:0x00C28B44
         .fixup1 = $-4
-        sar     eax,1
-        sub     eax,(640/2) ;nHalfWidth
-        mov     dword[esp+10h],eax
-        fiadd   dword[esp+10h]
-        fstp    dword[esp+10h]
+        fdiv    dword[vOldWidth]
+        ret
+endp
 
-        .adjust_posy:
-        fld     dword[esp+14h]
-        mov     eax,dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nHeight:0x00C28B48
-        .fixup2 = $-4
-        sar     eax,1
-        sub     eax,(480/2) ;nHalfHeight
-        mov     dword[esp+14h],eax
-        fiadd   dword[esp+14h]
-        fstp    dword[esp+14h]
+proc BackgroundFX_GetMatrixScaleYMul c
 
-        .back:
-        fld     dword[esp+8]
+        locals
+                nOldHeight dd 480.0
+        endl
+
+        fild    dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nHeight:0x00C28B48
+        .fixup1 = $-4
+        fdiv    dword[nOldHeight]
+        ret
+endp
+
+proc BackgroundFX_CreateMatrix c ptMatrix,vAngle,vScale,vPivotX,vPivotY ; changed to scale with resolution, does not stretch/shrink horizontally
+
+        locals
+                vScaleXMul rd 1
+                vScaleYMul rd 1
+                ;vOldWidth dd 640.0
+                ;vFloat05 dd 0.5
+        endl
+
+        push    ebx
+        mov     ebx,dword[ptMatrix]
+        ccall   BackgroundFX_GetMatrixScaleXMul
+        fstp    dword[vScaleXMul]
+        ccall   BackgroundFX_GetMatrixScaleYMul
+        fstp    dword[vScaleYMul]
+
+        .apply_scale_mul:
+        fld     dword[vPivotX]
+        fmul    dword[vScaleXMul]
+        fstp    dword[vPivotX]
+        fld     dword[vPivotY]
+        fmul    dword[vScaleYMul]
+        fstp    dword[vPivotY]
+        fld     dword[vScale]
+        fmul    dword[vScaleYMul]
+        fstp    dword[vScale]
+
+        ;.adjust_posx: ; center horizontally
+        ;fld     dword[vOldWidth]
+        ;fmul    dword[vScaleYMul]
+        ;fisubr  dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nWidth:0x00C28B44
+        ;.fixup1 = $-4
+        ;fmul    dword[vFloat05]
+        ;fadd    dword[vPivotX]
+        ;fstp    dword[vPivotX]
+
+        .fill_struct:
+        fld     dword[vAngle]
         fcos
-        jmp     near PATCH_TEMP_PROC ;loc_4192E6
-        .fixup3 = $-4
+        fmul    dword[vScale]
+        fstp    dword[ebx]
+        fld     dword[vAngle]
+        fsin
+        fld     st
+        fmul    dword[vScale]
+        fstp    dword[ebx+4]
+        fchs
+        fmul    dword[vScale]
+        fstp    dword[ebx+8]
+        push    dword[ebx]
+        pop     dword[ebx+12]
+        mov     eax,dword[vPivotX]
+        mov     ecx,dword[vPivotY]
+        mov     edx,dword[vScale]
+        mov     dword[ebx+16],eax
+        mov     dword[ebx+20],ecx
+        mov     dword[ebx+24],edx
+
+        .end:
+        pop     ebx
+        ret
+endp
 
 loc_41A8A4: ; TypeWriterBox_DrawHandler
 
@@ -1501,3 +1710,195 @@ loc_41D7A3: ; InputBox_Draw
         lea     edi,dword[esi+54h]
         jmp     near PATCH_TEMP_PROC ;loc_41D7BA
         .fixup3 = $-4
+
+proc Q3DPicture_RegisterSize c ptStaticTilemap,vX,vY,vWidth,vHeight,nDepth ; copied from IGI2
+
+        locals
+                _ptQTilemap rd 1
+                vY3 rd 1
+                vXStep rd 1
+                vXTemp rd 1
+                y rd 1
+                vYStep rd 1
+        endl
+
+        push    esi
+        mov     esi,dword[ptStaticTilemap]
+        push    edi
+        mov     edi,dword[vX]
+        mov     ecx,dword[esi]
+        mov     dword[vXTemp],edi
+        xor     edi,edi
+        mov     dword[_ptQTilemap],ecx
+        movsx   eax,word[ecx+4]
+        mov     dword[ptStaticTilemap],eax
+        mov     dword[y],edi
+        fild    dword[ptStaticTilemap]
+        movsx   edx,word[ecx+6]
+        fdivr   dword[vWidth]
+        mov     dword[ptStaticTilemap],edx
+        cmp     edx,edi
+        fstp    dword[vXStep]
+        fild    dword[ptStaticTilemap]
+        mov     dword[ptStaticTilemap],edi
+        fdivr   dword[vHeight]
+        fstp    dword[vYStep]
+        jle     .loc_60B3F6
+        push    ebx
+        .loc_60B337:
+        mov     edx,dword[vXTemp]
+        xor     ebx,ebx
+        test    eax,eax
+        mov     dword[vX],edx
+        jle     .loc_60B3D9
+        mov     eax,dword[ptStaticTilemap]
+        mov     edi,dword[vY]
+        ;lea     edx,dword[ecx+eax*2+10h]
+        lea     edx,dword[ecx+eax*1+10h]
+        mov     dword[vWidth],edx
+        .loc_60B354:
+        mov     eax,dword[vWidth]
+        ;mov     ax,word[eax]
+        ;test    ax,ax
+        mov     al,byte[eax]
+        test    al,al
+        jz      .loc_60B3BC
+        fld     dword[vYStep]
+        fadd    dword[vY]
+        mov     ecx,dword[nDepth]
+        mov     edx,dword[esi+24h]
+        ;and     eax,0FFFFh
+        and     eax,0FFh
+        push    ecx             ; nDepth
+        mov     ecx,dword[esi+0Ch]
+        dec     eax
+        fstp    dword[vY3]
+        fld     dword[vXStep]
+        fadd    dword[vX]
+        push    edx             ; bQGraphicFlags
+        mov     edx,dword[esi+1Ch]
+        push    eax             ; nFrame
+        mov     eax,dword[esi+10h]
+        push    eax             ; vZ
+        mov     eax,dword[esi+18h]
+        fstp    dword[vHeight]
+        push    ecx             ; vA
+        mov     ecx,dword[esi+14h]
+        push    edx             ; vB1
+        push    eax             ; vG1
+        mov     eax,dword[vY3]
+        push    ecx             ; vR1
+        mov     ecx,dword[vHeight]
+        mov     edx,dword[esi]
+        push    eax             ; vY4
+        push    ecx             ; vX4
+        push    eax             ; vY3
+        mov     eax,dword[vX]
+        push    eax             ; vX3
+        push    edi             ; vY2
+        push    ecx             ; vX2
+        push    edi             ; vY1
+        push    eax             ; vX1
+        mov     eax,dword[edx+8]
+        push    eax             ; ptQSprite
+        call    near PATCH_TEMP_PROC ;QSprite_Register4AZ:0x004B53B0
+        .fixup1 = $-4
+        mov     ecx,dword[vHeight]
+        add     esp,44h
+        mov     dword[vX],ecx
+        mov     ecx,dword[_ptQTilemap]
+        .loc_60B3BC:
+        mov     eax,dword[vWidth]
+        mov     edx,dword[ptStaticTilemap]
+        ;add     eax,2
+        add     eax,1
+        inc     ebx
+        mov     dword[vWidth],eax
+        inc     edx
+        movsx   eax,word[ecx+4]
+        cmp     ebx,eax
+        mov     dword[ptStaticTilemap],edx
+        jl      .loc_60B354
+        .loc_60B3D9:
+        fld     dword[vYStep]
+        fadd    dword[vY]
+        mov     edx,dword[y]
+        movsx   edi,word[ecx+6]
+        fstp    dword[vY]
+        inc     edx
+        cmp     edx,edi
+        mov     dword[y],edx
+        jl      .loc_60B337
+        pop     ebx
+        .loc_60B3F6:
+        pop     edi
+        pop     esi
+        ret
+endp
+
+loc_421CB6: ; MenuScreen_DrawHandler
+
+        push    -1 ; nDepth
+        fild    dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nHeight:0x00C28B48
+        .fixup1 = $-4
+        push    ecx
+        fstp    dword[esp] ; vHeight
+        fild    dword[PATCH_TEMP_ADDR] ;Display_tActiveMode.nWidth:0x00C28B44
+        .fixup2 = $-4
+        push    ecx
+        fstp    dword[esp] ; vWidth
+        push    0 ; vY
+        push    0 ; vX
+        push    esi
+        call    Q3DPicture_RegisterSize
+        add     esp,18h
+
+        .back:
+        jmp     near PATCH_TEMP_PROC ;loc_421CBF
+        .fixup3 = $-4
+
+;--------------------------------------------------
+; dpi awareness patch
+;--------------------------------------------------
+
+proc SetDPIAwareness
+
+        locals
+                dll_wstr du 'User32.dll',0
+                proc_cstr db 'SetProcessDPIAware',0
+        endl
+
+        push    ebx
+        xor     ebx,ebx
+
+        .get_module:
+        lea     eax,[dll_wstr]
+        invoke  GetModuleHandle,eax
+        test    eax,eax
+        jnz     .get_proc
+
+        .get_lib:
+        lea     eax,[dll_wstr]
+        invoke  LoadLibrary,eax
+        test    eax,eax
+        jz      .end
+        mov     ebx,eax
+
+        .get_proc:
+        lea     ecx,[proc_cstr]
+        invoke  GetProcAddress,eax,ecx
+        test    eax,eax
+        jz      .end
+
+        .call_proc:
+        call    eax
+
+        .free_lib:
+        test    ebx,ebx
+        jz      .end
+        invoke  FreeLibrary,ebx  ; this line should never be reached
+
+        .end:
+        pop     ebx
+        ret
+endp
