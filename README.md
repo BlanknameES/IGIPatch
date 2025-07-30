@@ -13,18 +13,19 @@ Individual features of the patch can be tweaked by editing the file 'IGIPatch.in
 - American
 - Japanese
 
-# Current feature list - v0.50 (updated 2025-07-09)
+# Current feature list - v0.60 (updated 2025-07-29)
 - CD check removal.
 - Improved timer resolution (beyond microseconds).
 - Fixed windows cursor being visible in windowed mode.
 - Fixed cursor accuracy in fullscreen mode for menus.
-- Added support for borderless window mode. Use command-line parameter 'Borderless' to turn it on.
+- Added support for borderless window mode. Use command-line parameters 'Window' and 'Borderless' to turn it on.
 - Fixed buffer overflow when retrieving display modes. This solves the very known graphics menu crash.
 - Display modes below the max bit depth of the screen are no longer selectable. This has been done because the game is limited to only 64 display modes.
 - Fixed Resolution listbox showing a wrong display mode; Resolution limit raised from 8192x8192x32 to 65536x65536.
-- Added widescreen support; Screen stretching is disabled and FOV is automatically adjusted.
+- Added widescreen support; Screen shrinking/stretching is disabled and horizontal FOV is automatically adjusted.
 - Added debug features via command-line arguments: NoLightmaps, NoTerrainLightmaps, DebugText, Debug, Small, DebugKeys.
-- Disabled the hard-coded 640x480x16 mode set in the main menu. Main menu resolution can be set in the INI file.
+- Disabled the hard-coded 640x480x16 mode set for the main menu. A custom main menu resolution can be set in the INI file.
+- IGI is now DPI-Aware. Solves the issue with the size of the client window being incorrect when Windows DPI scaling is set higher than 100%.
 
 # Known issues
 1. Intro videos not playing:
@@ -32,9 +33,7 @@ Individual features of the patch can be tweaked by editing the file 'IGIPatch.in
 2. When playing with a resolution of 2K or above, the game falls back to 640x480:
 - The game uses DirectX7, which is hardcoded to 2048x2048 pixels. Use UCyborg's Legacy Direct3D Resolution Hack or a wrapper without that limitation (eg.: dgVoodoo2).
 3. Game crashes when loading a mission:
-- Some ingame overlays (such as Rivatuner) are known to cause crashes. Disable them before launching the game.
-4. Main menu looks pixelated when using Borderless Window mode:
-- Menus are rendered at a resolution of 640x480; when using Borderless Window mode, the window gets upscaled to match the desktop resolution. Sadly, there is no solution for this yet.
+- Some in-game overlays (such as Rivatuner) are known to cause crashes. Disable them before launching the game.
 
 # Credits
 Special thanks to @neoxaero [(Sagatt)](https://github.com/Sagatt) for the immense help provided.
