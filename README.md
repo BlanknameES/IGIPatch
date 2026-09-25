@@ -2,7 +2,7 @@
 A fan-made patch for Project IGI, currently in an early stage of development. Bug-fixing, QoL improvements and better compatibility with modern systems are the main goals of the patch.
 
 # Installation
-1. Find your IGI installation directory and backup the file 'pc\IGI.exe'.
+1. Find your IGI installation directory (folder 'pc' is the root directory, if it exists) and backup the file 'IGI.exe'.
 2. Extract the contents of the ZIP archive (IGIPatch_vx.xx_XX_NoSetup.zip) to the root directory of your game, accept when prompted to replace IGI.exe.
 
 # Configuration
@@ -10,8 +10,11 @@ Individual features of the patch can be tweaked by editing the file 'IGIPatch.in
 
 # Supported game versions
 - European/Chinese
-- American
-- Japanese
+- American (currently not supported in v0.90)
+- Japanese (currently not supported in v0.90)
+
+# Current feature list - v0.90 (updated 2026-09-25)
+- *Changelog not done yet, be patient.*
 
 # Current feature list - v0.60 (updated 2025-07-29)
 - CD check removal.
