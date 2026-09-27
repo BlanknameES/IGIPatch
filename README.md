@@ -20,9 +20,9 @@ Individual features of the patch can be tweaked by editing the file `IGIPatch.in
 
 # Current feature list - v0.90 (updated 2026-09-25)
 
-### General game fixes and improvements
+## General game fixes and improvements
 
-- Added an option to remove the CD check (enabled by default).
+- Added CD check removal.
 - Improved timer resolution using higher-resolution timing APIs.
 - Fixed Windows cursor visibility and positioning in windowed mode.
 - Improved mouse cursor accuracy in menus while in fullscreen mode.
@@ -32,55 +32,49 @@ Individual features of the patch can be tweaked by editing the file `IGIPatch.in
 - Display modes below 640x480x16 are now filtered out to help avoid exceeding the 64-entry limit.
 - IGI is now DPI-aware, fixing incorrect game window sizes with Windows DPI scaling above 100%.
 
-### Patching and configuration
+## Patching and configuration
 
-- Added an external editor for installing and removing the IGIPatch DLL loader from the main executable, with an option to enable the Large Address Aware flag.
+- Added an external editor for installing and removing the IGIPatch DLL loader from the main executable, with an option to enable the `Large Address Aware` flag.
 - Added an INI configuration system for configuring individual patches and features.
   - Configurable `Enabled` option to enable or disable the main patches and hooks.
   - Configurable `Debug` option to display patcher progress and error messages.
 - Added a plugin system for loading external plugins.
 
-### Window and display
+## Window and display
 
 - Added borderless window mode.
   - Enable it with the `Borderless` command-line argument.
-  - The `Window` argument can also be used to enable windowed mode.
-  - Configurable window scaling modes.
+  - Configurable window scaling modes through an INI setting.
 - Added widescreen support with automatic aspect-ratio correction.
 - Added proper widescreen viewport scaling with horizontal FOV expansion (`hor+`) or vertical FOV reduction (`vert-`).
+  - Configurable viewport scaling mode through an INI setting.
+  - Configurable INI setting to set viewport FOV in percentage.
 - Fixed rendering and LOD distance calculations for `hor+` scaling mode.
 
-### Main menu
+## Main menu
 
-- Added a configurable main-menu display mode, defaulting to the in-game resolution.
-- Added configurable main-menu background color for areas not covered by the background picture.
-- Added configurable main-menu background scaling:
-  - No scaling.
-  - Stretch to fill.
-  - Preserve aspect ratio.
-- Added an option to enable or disable main-menu BackgroundFX.
+- Main menu now supports a custom display mode, defaulting to the in-game resolution.
+  - Configurable INI setting for resolution and color depth.
+  - Configurable INI setting for background scaling mode ('No scaling', 'Stretch to fill' or 'Preserve aspect ratio').
+  - Configurable INI setting for background color in areas not covered by the background picture.
+  - Configurable INI setting to enable or disable `BackgroundFX`.
 - Fixed scaling and positioning of main-menu elements for resolutions other than 640x480.
 
-### Debug features
+## Debug features
 
-- Added debug features through command-line arguments:
-  - `NoLightmaps`
-  - `NoTerrainLightmaps`
-  - `DebugText`
-  - `Debug`
-  - `Small`
-  - `DebugKeys`
+- Added debug features through command-line arguments: `NoLightmaps`, `NoTerrainLightmaps`, `DebugText`, `Debug`, `Small` and`DebugKeys`.
 - Debug keys can now be used without completing all missions.
 
-### Frame rate and timing
+## Frame rate and timing
 
 - Added a new FPS limiter with accurate, high-resolution timing.
+  - Configurable INI settings for timing API selection, input update rate and maximum rendering FPS.
 - Added a render interpolation phase between fixed 30 FPS game ticks for smoother rendering.
-- Added interpolation support for a wide range of moving game objects.
+  - Added interpolation support for a wide range of moving game objects.
+  - Configurable INI setting to enable or disable render interpolation; the `FPSLock` command-line argument can also be used to disable it.
 - Added phase-aware input handling with precise mouse input deltas for each game phase (logic, interpolation and rendering).
-- Added configurable timing API selection, input update rate and maximum rendering FPS.
-- Added configurable per-axis mouse sensitivity multipliers.
-- Added a configurable maximum mouse-sensitivity multiplier for the in-game sensitivity slider.
+  - Configurable INI settings for per-axis mouse sensitivity multipliers.
+  - Configurable INI setting for the maximum mouse-sensitivity multiplier used by the in-game sensitivity slider.
 
 # Known issues
 1. Intro videos not playing:
