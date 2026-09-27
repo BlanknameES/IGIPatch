@@ -1,42 +1,94 @@
 # IGIPatch
-A fan-made patch for Project IGI, currently in an early stage of development. Bug-fixing, QoL improvements and better compatibility with modern systems are the main goals of the patch.
+A fan-made patch for Project IGI. Bug fixes, QoL improvements and better compatibility with modern systems are the main goals of the patch.
 
 # Installation
-1. Find your IGI installation directory (folder 'pc' is the root directory, if it exists) and backup the file 'IGI.exe'.
-2. Extract the contents of the ZIP archive (IGIPatch_vx.xx_XX_NoSetup.zip) to the root directory of your game, accept when prompted to replace IGI.exe.
+1. Locate your IGI installation directory (`pc` is the root directory, if present). Optionally back up `IGI.exe`.
+2. Extract the contents of `IGIPatch_vx.xx_XX_NoSetup.zip` to the root directory of the game.
+3. Run `IGIPatchEditor.exe` and click `Patch` to install the IGIPatch DLL loader in `IGI.exe`.
+
+# Deinstallation
+1. Run `IGIPatchEditor.exe` and click `Restore` to remove the IGIPatch DLL loader from `IGI.exe`.
+2. Delete the following files: `IGIPatch - Debug keys.txt`, `IGIPatch.dll`, `IGIPatch.ini` and `IGIPatchEditor.exe`.
 
 # Configuration
-Individual features of the patch can be tweaked by editing the file 'IGIPatch.ini' with a text editor (eg.: Notepad). Numeric constant '1' means true/enable, whereas '0' means false/disable.
+Individual features of the patch can be tweaked by editing the file `IGIPatch.ini` with a text editor (e.g. `Notepad`). A value of `1` enables a feature, while `0` disables it.
 
 # Supported game versions
 - European/Chinese
-- American (currently not supported in v0.90)
-- Japanese (currently not supported in v0.90)
+- American (not currently supported in v0.90)
+- Japanese (not currently supported in v0.90)
 
 # Current feature list - v0.90 (updated 2026-09-25)
-- *Changelog not done yet, be patient.*
 
-# Current feature list - v0.60 (updated 2025-07-29)
-- CD check removal.
-- Improved timer resolution (beyond microseconds).
-- Fixed windows cursor being visible in windowed mode.
-- Fixed cursor accuracy in fullscreen mode for menus.
-- Added support for borderless window mode. Use command-line parameters 'Window' and 'Borderless' to turn it on.
-- Fixed buffer overflow when retrieving display modes. This solves the very known graphics menu crash.
-- Display modes below the max bit depth of the screen are no longer selectable. This has been done because the game is limited to only 64 display modes.
-- Fixed Resolution listbox showing a wrong display mode; Resolution limit raised from 8192x8192x32 to 65536x65536.
-- Added widescreen support; Screen shrinking/stretching is disabled and horizontal FOV is automatically adjusted.
-- Added debug features via command-line arguments: NoLightmaps, NoTerrainLightmaps, DebugText, Debug, Small, DebugKeys.
-- Disabled the hard-coded 640x480x16 mode set for the main menu. A custom main menu resolution can be set in the INI file.
-- IGI is now DPI-Aware. Solves the issue with the size of the client window being incorrect when Windows DPI scaling is set higher than 100%.
+### General game fixes and improvements
+
+- Added an option to remove the CD check (enabled by default).
+- Improved timer resolution using higher-resolution timing APIs.
+- Fixed Windows cursor visibility and positioning in windowed mode.
+- Improved mouse cursor accuracy in menus while in fullscreen mode.
+- Fixed the display-mode buffer overflow responsible for the well-known Graphics menu crash.
+- Fixed the wrong resolution being displayed as selected in the Graphics Configuration menu.
+- Removed the 8192x8192 resolution limit; resolutions are now limited by the maximum supported pixel count (2,147,483,647).
+- Display modes below 640x480x16 are now filtered out to help avoid exceeding the 64-entry limit.
+- IGI is now DPI-aware, fixing incorrect game window sizes with Windows DPI scaling above 100%.
+
+### Patching and configuration
+
+- Added an external editor for installing and removing the IGIPatch DLL loader from the main executable, with an option to enable the Large Address Aware flag.
+- Added an INI configuration system for configuring individual patches and features.
+  - Configurable `Enabled` option to enable or disable the main patches and hooks.
+  - Configurable `Debug` option to display patcher progress and error messages.
+- Added a plugin system for loading external plugins.
+
+### Window and display
+
+- Added borderless window mode.
+  - Enable it with the `Borderless` command-line argument.
+  - The `Window` argument can also be used to enable windowed mode.
+  - Configurable window scaling modes.
+- Added widescreen support with automatic aspect-ratio correction.
+- Added proper widescreen viewport scaling with horizontal FOV expansion (`hor+`) or vertical FOV reduction (`vert-`).
+- Fixed rendering and LOD distance calculations for `hor+` scaling mode.
+
+### Main menu
+
+- Added a configurable main-menu display mode, defaulting to the in-game resolution.
+- Added configurable main-menu background color for areas not covered by the background picture.
+- Added configurable main-menu background scaling:
+  - No scaling.
+  - Stretch to fill.
+  - Preserve aspect ratio.
+- Added an option to enable or disable main-menu BackgroundFX.
+- Fixed scaling and positioning of main-menu elements for resolutions other than 640x480.
+
+### Debug features
+
+- Added debug features through command-line arguments:
+  - `NoLightmaps`
+  - `NoTerrainLightmaps`
+  - `DebugText`
+  - `Debug`
+  - `Small`
+  - `DebugKeys`
+- Debug keys can now be used without completing all missions.
+
+### Frame rate and timing
+
+- Added a new FPS limiter with accurate, high-resolution timing.
+- Added a render interpolation phase between fixed 30 FPS game ticks for smoother rendering.
+- Added interpolation support for a wide range of moving game objects.
+- Added phase-aware input handling with precise mouse input deltas for each game phase (logic, interpolation and rendering).
+- Added configurable timing API selection, input update rate and maximum rendering FPS.
+- Added configurable per-axis mouse sensitivity multipliers.
+- Added a configurable maximum mouse-sensitivity multiplier for the in-game sensitivity slider.
 
 # Known issues
 1. Intro videos not playing:
-- Install/register Indeo Video 5 (IV50) codec.
+- Install/register the Indeo Video 5 (IV50) codec. Videos may still not play in borderless/windowed mode.
 2. When playing with a resolution of 2K or above, the game falls back to 640x480:
-- The game uses DirectX7, which is hardcoded to 2048x2048 pixels. Use UCyborg's Legacy Direct3D Resolution Hack or a wrapper without that limitation (eg.: dgVoodoo2).
+- The game uses DirectX 7, which imposes a 2048x2048 pixel resolution limit. Use UCyborg's `Legacy Direct3D Resolution Hack` or a wrapper without that limitation (e.g. `dgVoodoo2`).
 3. Game crashes when loading a mission:
-- Some in-game overlays (such as Rivatuner) are known to cause crashes. Disable them before launching the game.
+- Some in-game overlays (such as `RivaTuner`) are known to cause crashes. Disable them before launching the game.
 
 # Credits
 Special thanks to @neoxaero [(Sagatt)](https://github.com/Sagatt) for the immense help provided.
