@@ -3,6 +3,9 @@ A fan-made patch for Project IGI. Bug fixes, QoL improvements and better compati
 
 # Current feature list - v0.90 (updated 2026-09-25)
 
+<details>
+  <summary>View feature list</summary>
+
 ### General game fixes and improvements
 
 - Added CD check removal.
@@ -59,6 +62,13 @@ A fan-made patch for Project IGI. Bug fixes, QoL improvements and better compati
   - Configurable INI settings for per-axis mouse sensitivity multipliers.
   - Configurable INI setting for the maximum mouse-sensitivity multiplier used by the in-game sensitivity slider.
 
+</details>
+
+# Supported game versions
+- European/Chinese
+- American (not currently supported in v0.90)
+- Japanese (not currently supported in v0.90)
+
 # Installation
 1. Locate your IGI installation directory (`pc` is the root directory, if present). Optionally back up `IGI.exe`.
 2. Extract the contents of `IGIPatch_vx.xx_XX_NoSetup.zip` to the root directory of the game.
@@ -70,11 +80,6 @@ A fan-made patch for Project IGI. Bug fixes, QoL improvements and better compati
 
 # Configuration
 Individual features of the patch can be tweaked by editing the file `IGIPatch.ini` with a text editor (e.g. `Notepad`). A value of `1` enables a feature, while `0` disables it.
-
-# Supported game versions
-- European/Chinese
-- American (not currently supported in v0.90)
-- Japanese (not currently supported in v0.90)
 
 # Known issues
 1. Intro videos not playing:
