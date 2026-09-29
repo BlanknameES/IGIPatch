@@ -1,6 +1,0 @@
-ProjectName             equ 'IGIPatch'
-ProjectVersion          equ '0.60'
-ProjectLongVer          equ '0.6.0.0'
-SubProjectName          equ 'IGIPatchDLL'
-SubProjectVersion       equ '0.60'
-SubProjectLongVer       equ '0.6.0.0'
