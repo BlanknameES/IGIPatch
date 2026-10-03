@@ -88,22 +88,26 @@ cstrFixmeSmall          db 'Small',0
 cstrInitAccTimerError   db 'Error initializing AccTimer task API.',0
 
 cstrFPSLock             db 'FPSLock',0
+cstrGLogicFPSCounter    db 'GLogic FPS: %.2f',10,0
+cstrRenderFPSCounter    db 'Render FPS: %.2f',10,0
+
+Flow_vFPSCounterInterval    dq 0.5
 
 ;Mouse_vScaleFactorInv   dq 0.00392156862745098 ; 1.0 / 255.0
 Mouse_vScaleFactorInv   dd 0.0039215689 ; 1.0 / 255.0
 
-Mouse_tMouse_apvAnalogX_Tbl     dd Mouse_tMouse_vAnalogX_M100
-                                dd Mouse_tMouse_vAnalogX_M010
-                                dd Mouse_tMouse_vAnalogX_M110
-                                dd Mouse_tMouse_vAnalogX_M001
-                                dd Mouse_tMouse_vAnalogX_M101
-                                dd Mouse_tMouse_vAnalogX_M011
-                                dd Mouse_tMouse_vAnalogX_M111
+Mouse_apvAnalogX_Tbl    dd Mouse_vAnalogX_M100
+                        dd Mouse_vAnalogX_M010
+                        dd Mouse_vAnalogX_M110
+                        dd Mouse_vAnalogX_M001
+                        dd Mouse_vAnalogX_M101
+                        dd Mouse_vAnalogX_M011
+                        dd Mouse_vAnalogX_M111
 
-Mouse_tMouse_apvAnalogY_Tbl     dd Mouse_tMouse_vAnalogY_M100
-                                dd Mouse_tMouse_vAnalogY_M010
-                                dd Mouse_tMouse_vAnalogY_M110
-                                dd Mouse_tMouse_vAnalogY_M001
-                                dd Mouse_tMouse_vAnalogY_M101
-                                dd Mouse_tMouse_vAnalogY_M011
-                                dd Mouse_tMouse_vAnalogY_M111
+Mouse_apvAnalogY_Tbl    dd Mouse_vAnalogY_M100
+                        dd Mouse_vAnalogY_M010
+                        dd Mouse_vAnalogY_M110
+                        dd Mouse_vAnalogY_M001
+                        dd Mouse_vAnalogY_M101
+                        dd Mouse_vAnalogY_M011
+                        dd Mouse_vAnalogY_M111

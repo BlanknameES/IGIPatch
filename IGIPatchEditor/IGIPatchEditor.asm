@@ -14,7 +14,7 @@ include '.\baseexe\rsrc.inc'
 
 ;------------------------------------------------------------
 
-format PE GUI 4.0 at 0x00400000 as 'exe'
+format PE GUI 4.0 NX at 0x00400000 as 'exe'
 entry start
 
 section '.code' code readable executable
@@ -44,5 +44,5 @@ include '.\patcher\_bss.asm'
 section '.rsrc' resource data readable
 include '.\baseexe\_rsrc.asm'
 
-;section '.reloc' fixups data readable discardable
-;include 'base\_reloc.asm'
+section '.reloc' fixups data readable discardable
+include '.\baseexe\_reloc.asm'

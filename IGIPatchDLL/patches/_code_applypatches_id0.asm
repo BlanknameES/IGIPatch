@@ -121,6 +121,15 @@ proc Patcher_PatchSharedFuncs_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,AnimController_SetTPFValue.fixup1,edi,0x00A54658,esi,FALSE ;AnimController_nTicksPerFrame
         and     ebx,eax
 
+        ; DebugText_printf_NEW
+        ForceDefineSymbol DebugText_printf_NEW
+        stdcall Patcher_WriteAddressReloc,DebugText_printf_NEW.fixup1,edi,0x00A5EA75,esi,FALSE ;DebugText_isEnabled
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,DebugText_printf_NEW.fixup2,edi,0x00A5EBD0,esi,FALSE ;DebugText_ptWindow
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,DebugText_printf_NEW.fixup3,edi,0x004E76E0,esi,TRUE ;TextWindow_vprintf
+        and     ebx,eax
+
         .end:
         mov     eax,ebx
         pop     edi esi ebx
@@ -238,14 +247,13 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,Cursor_UpdatePosition.fixup2,edi,0x00C28B48,esi,FALSE ;Display_tActiveMode.nHeight
         and     ebx,eax
 
-        ; Cursor_Open - point to new Cursor_RunHandler_NEW function
+        ; Cursor_Open - point to the new Cursor_RunHandler_NEW function
         stdcall Patcher_WriteAddressReloc,0x00424BBF+1,esi,Cursor_RunHandler_NEW,edi,FALSE
         and     ebx,eax
 
         ; Cursor_RunHandler_NEW - rewritten function
         stdcall Patcher_WriteAddressReloc,Cursor_RunHandler_NEW.fixup1,edi,0x00C28F8C,esi,FALSE ;Mouse_tMouse.bButton
         and     ebx,eax
-
 
         ;------------------------------------------------------------
         ; BorderlessPatch
@@ -850,8 +858,8 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         and     ebx,eax
 
         ; Flow_ResetTimings - new function to reset flow timings
-        stdcall Patcher_WriteAddressReloc,Flow_ResetTimings.fixup1,edi,0x00567C8C,esi,FALSE ;Flow_ptFlow
-        and     ebx,eax
+        ;stdcall Patcher_WriteAddressReloc,Flow_ResetTimings.fixup1,edi,0x00567C8C,esi,FALSE ;Flow_ptFlow
+        ;and     ebx,eax
 
         ; Flow_SetFrequency - init new members
         stdcall Patcher_WriteHookReloc,0x00402820,esi,Flow_SetFrequency_NEW,edi,0x00402870-0x00402820
@@ -889,10 +897,8 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,Flow_IsUnlimitedFPS.fixup3,edi,0x00A70C5A,esi,FALSE ;ScreenGrab_isGrabSingle
         and     ebx,eax
 
-        ; Flow_IsInterpSuppressed
-        stdcall Patcher_WriteAddressReloc,Flow_IsInterpSuppressed.fixup1,edi,0x00567C8C,esi,FALSE ;Flow_ptFlow
-        and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,Flow_IsInterpSuppressed.fixup2,edi,0x005C8BFC,esi,FALSE ;AppContext_tAppContext.isActive
+        ; Flow_IsFPSLocked
+        stdcall Patcher_WriteAddressReloc,Flow_IsFPSLocked.fixup1,edi,0x005C8BFC,esi,FALSE ;AppContext_tAppContext.isActive
         and     ebx,eax
 
         ; Flow_RunChildren - rewrite inlined code as standalone function
@@ -923,6 +929,10 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteHookReloc,0x00402260,esi,loc_402260,edi,0x0040262E-0x00402260
         and     ebx,eax
         stdcall Patcher_WriteAddressReloc,loc_402260.fixup1,edi,0x0040262E,esi,TRUE
+        and     ebx,eax
+
+        ; Flow_UpdateFPSCounter - draw fps counters
+        stdcall Patcher_WriteAddressReloc,Flow_UpdateFPSCounter.fixup1,edi,0x00567C8C,esi,FALSE ;Flow_ptFlow
         and     ebx,eax
 
         ; Flow_Open - allocate interpolation task event/list
@@ -1097,18 +1107,20 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,loc_464D72.fixup3,edi,0x00464D78,esi,TRUE
         and     ebx,eax
 
-        ; HumanView_UpdateBody - fix landing impact speed
-        stdcall Patcher_WriteHookReloc,0x00464E1B,esi,loc_464E1B,edi,0x00464E2D-0x00464E1B
+        ; HumanView_UpdateBody - fix landing impact speed during interpolation
+        stdcall Patcher_WriteHookReloc,0x00464E1B,esi,loc_464E1B,edi,0x00464E21-0x00464E1B
         and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,loc_464E1B.fixup1,edi,0x00464E21,esi,TRUE
+        stdcall Patcher_WriteAddressReloc,loc_464E1B.fixup1,edi,0x005334A8,esi,FALSE ;flt_5334A8
         and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,loc_464E1B.fixup2,edi,0x005334A8,esi,FALSE ;flt_5334A8
+        stdcall Patcher_WriteAddressReloc,loc_464E1B.fixup2,edi,0x00464E2D,esi,TRUE
         and     ebx,eax
         stdcall Patcher_WriteAddressReloc,loc_464E1B.fixup3,edi,0x00464E2D,esi,TRUE
         and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_464E1B.fixup4,edi,0x00464E21,esi,TRUE
+        and     ebx,eax
 
         ; HumanView_UpdateBody - fix view model retraction speed on collision during interpolation
-        stdcall Patcher_WriteHookReloc,0x00465102,esi,loc_465102,edi,0x004651F8-0x00465102
+        stdcall Patcher_WriteHookReloc,0x00465102,esi,loc_465102,edi,0x00465108-0x00465102
         and     ebx,eax
         stdcall Patcher_WriteAddressReloc,loc_465102.fixup1,edi,0x005339D8,esi,FALSE ;flt_5339D8
         and     ebx,eax
@@ -1117,6 +1129,8 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,loc_465102.fixup3,edi,0x00567C8C,esi,FALSE ;Flow_ptFlow
         and     ebx,eax
         stdcall Patcher_WriteAddressReloc,loc_465102.fixup4,edi,0x004651F8,esi,TRUE
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_465102.fixup5,edi,0x00465108,esi,TRUE
         and     ebx,eax
 
         ; HumanView_UpdateBody - fix object alpha/gamma speed during interpolation
@@ -1443,6 +1457,14 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,loc_4E0C8A.fixup1,edi,0x004E0C8F,esi,TRUE
         and     ebx,eax
 
+        ; Flow_UpdateCInput - new function to handle short interval input updates
+        stdcall Patcher_WriteAddressReloc,Flow_UpdateCInput.fixup1,edi,0x0048FC20,esi,TRUE ;Mouse_Update
+        and     ebx,eax
+
+        ; InputOptions_UpdateMouseSensitivity - updates mouse sensitivity multiplier variable
+        stdcall Patcher_WriteAddressReloc,InputOptions_UpdateMouseSensitivity.fixup1,edi,0x00406220,esi,TRUE ;Config_GetActivePlayerProfile
+        and     ebx,eax
+
         ; Mouse_ClearInput - new function to clear mouse input
         stdcall Patcher_WriteAddressReloc,Mouse_ClearInput.fixup1,edi,0x00C28F8C,esi,FALSE ;Mouse_tMouse.bButton
         and     ebx,eax
@@ -1471,22 +1493,56 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,loc_48FC7B.fixup1,edi,0x0048FC9B,esi,TRUE
         and     ebx,eax
 
-        ; InputPort_Open - replace InputPort_RunHandler with a nullsub to prevent a possible 1-tick delayed input
+        ; Mouse_WriteBufferedButtons - writes mouse button clicks into a accumulator
+        stdcall Patcher_WriteAddressReloc,Mouse_WriteBufferedButtons.fixup1,edi,0x00C28F8C,esi,FALSE ;Mouse_tMouse.bButton
+        and     ebx,eax
+
+        ; Mouse_ReadBufferedButtons - reads mouse button clicks from the accumulator
+        stdcall Patcher_WriteAddressReloc,Mouse_ReadBufferedButtons.fixup1,edi,0x00567C8C,esi,FALSE ;Flow_ptFlow
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,Mouse_ReadBufferedButtons.fixup2,edi,0x00C28F8C,esi,FALSE ;Mouse_tMouse.bButton
+        and     ebx,eax
+
+        ; InputPort_Open - rewrite function
         stdcall Patcher_WriteAddressReloc,0x004ED527+1,esi,InputPort_RunHandler_NEW,edi,FALSE
         and     ebx,eax
 
-        ; InputPort_Update - new function equivalent to InputPort_RunHandler minus the per-device update calls
-        stdcall Patcher_WriteAddressReloc,InputPort_Update.fixup1,edi,0x00A5EF9C,esi,FALSE ;InputPort_eCurrentPort
+        ; InputPort_RunHandler_NEW
+        stdcall Patcher_WriteAddressReloc,InputPort_RunHandler_NEW.fixup1,edi,0x00490230,esi,TRUE ;Keyboard_Update
         and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,InputPort_Update.fixup2,edi,0x00BC20A0,esi,FALSE ;InputPort.atInputPort[0]
+        stdcall Patcher_WriteAddressReloc,InputPort_RunHandler_NEW.fixup2,edi,0x00509CF0,esi,TRUE ;Joypad_Update
+        and     ebx,eax
+
+        ; InputPort_Update - new function equivalent to InputPort_RunHandler minus the per-device update calls
+        stdcall Patcher_WriteAddressReloc,InputPort_Update.fixup1,edi,0x00BC20A0,esi,FALSE ;InputPort.atInputPort[0]
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,InputPort_Update.fixup2,edi,0x00A5EF9C,esi,FALSE ;InputPort_eCurrentPort
         and     ebx,eax
         stdcall Patcher_WriteAddressReloc,InputPort_Update.fixup3,edi,0x00507EC0,esi,TRUE ;Input_Run
         and     ebx,eax
 
-        ; InputPort_InputHandler - handle phase inputs
-        stdcall Patcher_WriteAddressReloc,0x004ED0C1+1,esi,Mouse_tMouse_vAnalogY,edi,FALSE
+        ; InputPort_UpdateOnRun - new function to update analog x/y from current phase
+        stdcall Patcher_WriteAddressReloc,InputPort_UpdateOnRun.fixup1,edi,0x00A5EF9C,esi,FALSE ;InputPort_eCurrentPort
         and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,0x004ED0C8+2,esi,Mouse_tMouse_vAnalogX,edi,FALSE
+        stdcall Patcher_WriteAddressReloc,InputPort_UpdateOnRun.fixup2,edi,0x00BC20AC,esi,FALSE ;InputPort.atInputPort[0].eAnalogInputPortDevice
+        and     ebx,eax
+
+        ; InputPort_UpdateOnInterp - new function to update analog x/y from current phase
+        stdcall Patcher_WriteAddressReloc,InputPort_UpdateOnInterp.fixup1,edi,0x00A5EF9C,esi,FALSE ;InputPort_eCurrentPort
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,InputPort_UpdateOnInterp.fixup2,edi,0x00BC20AC,esi,FALSE ;InputPort.atInputPort[0].eAnalogInputPortDevice
+        and     ebx,eax
+
+        ; InputPort_UpdateOnDraw - new function to update analog x/y from current phase
+        stdcall Patcher_WriteAddressReloc,InputPort_UpdateOnDraw.fixup1,edi,0x00A5EF9C,esi,FALSE ;InputPort_eCurrentPort
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,InputPort_UpdateOnDraw.fixup2,edi,0x00BC20AC,esi,FALSE ;InputPort.atInputPort[0].eAnalogInputPortDevice
+        and     ebx,eax
+
+        ; InputPort_InputHandler - point to Mouse_vAnalogX/Y
+        stdcall Patcher_WriteAddressReloc,0x004ED0C1+1,esi,Mouse_vAnalogY,edi,FALSE
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,0x004ED0C8+2,esi,Mouse_vAnalogX,edi,FALSE
         and     ebx,eax
         stdcall Patcher_WriteHookReloc,0x004ED420,esi,loc_4ED420,edi,0x004ED510-0x004ED420
         and     ebx,eax
@@ -1499,24 +1555,6 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,loc_4ED420.fixup4,edi,0x00BC20BC,esi,FALSE ;InputPort.atInputPort[0].v1
         and     ebx,eax
         stdcall Patcher_WriteAddressReloc,loc_4ED420.fixup5,edi,0x00BC20AC,esi,FALSE ;InputPort.atInputPort[0].eAnalogInputPortDevice
-        and     ebx,eax
-
-        ; Input_Update - new function to handle short interval input updates
-        stdcall Patcher_WriteAddressReloc,Input_Update.fixup1,edi,0x0048FC20,esi,TRUE ;Mouse_Update
-        and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,Input_Update.fixup2,edi,0x00C28F8C,esi,FALSE ;Mouse_tMouse.bButton
-        and     ebx,eax
-
-        ; Input_UpdateOnRun - new function to handle input updates on RunChildren
-        stdcall Patcher_WriteAddressReloc,Input_UpdateOnRun.fixup1,edi,0x00490230,esi,TRUE ;Keyboard_Update
-        and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,Input_UpdateOnRun.fixup2,edi,0x00509CF0,esi,TRUE ;Joypad_Update
-        and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,Input_UpdateOnRun.fixup3,edi,0x00C28F8C,esi,FALSE ;Mouse_tMouse.bButton
-        and     ebx,eax
-
-        ; InputOptions_UpdateMouseSensitivity - updates mouse sensitivity multiplier variable
-        stdcall Patcher_WriteAddressReloc,InputOptions_UpdateMouseSensitivity.fixup1,edi,0x00406220,esi,TRUE ;Config_GetActivePlayerProfile
         and     ebx,eax
 
         ; HumanPlayerInput_ReadChannels - apply correct per-phase mouse delta
@@ -1549,6 +1587,26 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,loc_464826.fixup2,edi,0x005335C0,esi,FALSE ;dbl_5335C0
         and     ebx,eax
         stdcall Patcher_WriteAddressReloc,loc_464826.fixup3,edi,0x0046484D,esi,TRUE
+        and     ebx,eax
+
+        ; HumanCamera_MovementControlInput - apply correct per-phase mouse delta
+        stdcall Patcher_WriteHookReloc,0x00483455,esi,loc_483455,edi,0x0048346D-0x00483455
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_483455.fixup1,edi,0x0048346D,esi,TRUE
+        and     ebx,eax
+        stdcall Patcher_WriteHookReloc,0x004834AB,esi,loc_4834AB,edi,0x004834B7-0x004834AB
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_4834AB.fixup1,edi,0x004834B7,esi,TRUE
+        and     ebx,eax
+
+        ; HumanCamera_DeathCameraControlInput - apply correct per-phase mouse delta
+        stdcall Patcher_WriteHookReloc,0x00483E57,esi,loc_483E57,edi,0x00483E63-0x00483E57
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_483E57.fixup1,edi,0x00483E63,esi,TRUE
+        and     ebx,eax
+        stdcall Patcher_WriteHookReloc,0x00483E67,esi,loc_483E67,edi,0x00483E73-0x00483E67
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_483E67.fixup1,edi,0x00483E73,esi,TRUE
         and     ebx,eax
 
         ;------------------------------------------------------------

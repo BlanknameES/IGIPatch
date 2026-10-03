@@ -58,7 +58,7 @@ endp
 ; libloaderapi.h
 ;------------------------------------------------------------
 
-proc GetOrLoadLibraryW hLibModule,hLoadedLib
+proc GetOrLoadLibraryW hLibModule,hLoadedLib ; AVOID: causes antivirus false positives
 
         push    esi edi
         mov     esi,dword[hLibModule]
@@ -101,16 +101,14 @@ endp
 
 proc FreeLoadedLibrary hLibModule
 
-        .init_result:
-        mov     eax,TRUE
-
         .check_null:
-        mov     ecx,dword[hLibModule]
-        test    ecx,ecx
+        mov     eax,dword[hLibModule]
+        test    eax,eax
         jz      .end
 
         .free_lib:
         invoke  FreeLibrary,eax
+        mov     eax,TRUE
 
         .end:
         ret

@@ -57,6 +57,7 @@ struct INIFILE_SEC_NFL
         InputUpdateRate                 dd ?
         MaxRenderFPS                    dd ?
         EnableInterpolation             dd ?
+        ShowFPSCounter                  dd ?
         MouseSensMultX                  dd ?
         MouseSensMultY                  dd ?
         MaxMouseSensMult                dd ?

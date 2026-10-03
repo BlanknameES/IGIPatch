@@ -205,6 +205,14 @@ define MINDISPLAYMODEDEPTH 16
 ; NewFPSLimiterPatch
 ;------------------------------------------------------------
 
+NFL_FLOW_FPSLM_NORMAL       = 0
+NFL_FLOW_FPSLM_MOVIE        = 1
+NFL_FLOW_FPSLM_UNLIMITED    = 2
+
+NFL_FLOW_FPSLRM_NOT_SET = 0
+NFL_FLOW_FPSLRM_ASYNC   = 1
+NFL_FLOW_FPSLRM_SYNCED  = 2
+
 NFL_FLOW_PHASE_NONE     = 0
 NFL_FLOW_PHASE_RUN      = 1
 NFL_FLOW_PHASE_INTERP   = 2

@@ -1043,7 +1043,8 @@ loc_48A4AD: ; LoadingScreen_New
 
 loc_48A50D: ; LoadingScreen_New
 
-        .arg_0 = 4
+        ;.nItems = 4
+        .nTempValue = 4
 
         .logo_posx:
         mov     eax,dword[ebx+RECT.right]
@@ -1052,8 +1053,8 @@ loc_48A50D: ; LoadingScreen_New
         cdq
         sub     eax,edx
         sar     eax,1
-        mov     dword[esp+48h+.arg_0],eax
-        fild    dword[esp+48h+.arg_0]
+        mov     dword[esp+48h+.nTempValue],eax
+        fild    dword[esp+48h+.nTempValue]
         fstp    dword[ebp+4]
 
         .logo_posy:
@@ -1063,8 +1064,8 @@ loc_48A50D: ; LoadingScreen_New
         cdq
         sub     eax,edx
         sar     eax,1
-        mov     dword[esp+48h+.arg_0],eax
-        fild    dword[esp+48h+.arg_0]
+        mov     dword[esp+48h+.nTempValue],eax
+        fild    dword[esp+48h+.nTempValue]
         fstp    dword[ebp+8]
 
         .back:
@@ -3806,7 +3807,6 @@ loc_4020B0: ; Flow_CreateHandler
 
         .init_vars:
         mov     dword[Flow_isForbidDrawOneTick],TRUE
-        mov     dword[ecx+40h],ebx ;ptFlow->nTicksSinceRedraw
         mov     dword[ecx+4Ch],ebx ;ptFlow->nUnknown
         ; TODO: move here rest of .data vars
 
@@ -3819,25 +3819,62 @@ loc_4020B0: ; Flow_CreateHandler
         jmp     near PATCHER_JUMP_TRAP ;loc_4020C9
         .fixup2 = $-4
 
-proc Flow_ResetTimings c
+proc Flow_ResetTimings c ptFlow,isFullReset,nTimeNowLO,nTimeNowHI
 
         push    ebx
-        mov     ebx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
-        .fixup1 = $-4
+        mov     ebx,dword[ptFlow]
 
-        .reset:
+        .init_time_now:
+        mov     eax,dword[nTimeNowLO]
+        mov     edx,dword[nTimeNowHI]
+
+        .check_provided:
+        cmp     dword[isFullReset],FALSE
+        je      .reset_timings
+
+        .read_timer:
         ccall   AccTimer_Read
-        xor     ecx,ecx
-;mov     dword[ebx+30h],eax ;nStartTime
-;mov     dword[ebx+50h],ecx ;nSkipTime
+
+        .set_start_time:
         mov     dword[Flow_nStartTime],eax
         mov     dword[Flow_nStartTime+4],edx
-        mov     dword[Flow_nSkipTime],0
-        mov     dword[Flow_nSkipTime+4],0
+
+        .reset_timings:
+        xor     ecx,ecx
+        mov     dword[Flow_nSkipTime],ecx
+        mov     dword[Flow_nSkipTime+4],ecx
+        mov     dword[ebx+40h],ecx ;ptFlow->nTicksSinceRedraw
+        ;mov     byte[ebx+44h],TRUE ;ptFlow->isDrawn
+        mov     dword[ebx+44h],1 ;ptFlow->nFramesSinceLastTick
+
+        .reset_cinput:
+        ;mov     dword[Flow_nCInputUpdateTime],eax
+        ;mov     dword[Flow_nCInputUpdateTime+4],edx
+        mov     dword[Flow_nCInputLastTime],eax
+        mov     dword[Flow_nCInputLastTime+4],edx
+
+        .reset_glogic:
         mov     dword[Flow_nGLogicUpdateTime],eax
         mov     dword[Flow_nGLogicUpdateTime+4],edx
-        mov     dword[ebx+34h],ecx ;ptFlow->nTicks
-        mov     dword[ebx+38h],ecx ;ptFlow->nFrames
+        mov     dword[Flow_nGLogicLastTime],eax
+        mov     dword[Flow_nGLogicLastTime+4],edx
+
+        .reset_render:
+        ;mov     dword[Flow_nRenderUpdateTime],eax
+        ;mov     dword[Flow_nRenderUpdateTime+4],edx
+        mov     dword[Flow_nRenderLastTime],eax
+        mov     dword[Flow_nRenderLastTime+4],edx
+
+        .reset_timesteps:
+        ;mov     dword[Flow_nCInputTimestepAdd],ecx
+        ;mov     dword[Flow_vCInputTimestepAcc],ecx
+        ;mov     dword[Flow_vCInputTimestepAcc+4],ecx
+        mov     dword[Flow_nGLogicTimestepAdd],ecx
+        mov     dword[Flow_vGLogicTimestepAcc],ecx
+        mov     dword[Flow_vGLogicTimestepAcc+4],ecx
+        mov     dword[Flow_nRenderTimestepAdd],ecx
+        mov     dword[Flow_vRenderTimestepAcc],ecx
+        mov     dword[Flow_vRenderTimestepAcc+4],ecx
 
         .end:
         pop     ebx
@@ -3846,24 +3883,33 @@ endp
 
 proc Flow_SetFrequency_NEW c nFrequency
 
+        push    ebx
+        mov     ebx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
+        .fixup1 = $-4
+
         .reset_timings:
-        ccall   Flow_ResetTimings
+        ccall   Flow_ResetTimings,ebx,TRUE,0,0
+
+        .reset_fps_counter:
+        ccall   Flow_ResetFPSCounter
 
         .reset_vars:
-        mov     ecx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
-        .fixup1 = $-4
-        mov     edx,dword[nFrequency]
+        mov     eax,dword[nFrequency]
+        xor     ecx,ecx
+        mov     dword[Flow_isForbidDrawOneTick],TRUE
+        mov     dword[ebx+34h],ecx ;ptFlow->nTicks
+        mov     dword[ebx+38h],ecx ;ptFlow->nFrames
+        mov     dword[ebx+3Ch],eax ;ptFlow->nFrequency
         mov     dword[Flow_nRefreshRate],-1
-        mov     dword[ecx+3Ch],edx ;ptFlow->nFrequency
-        mov     byte[ecx+44h],TRUE ;ptFlow->isDrawn
 
         .set_sound_freq:
-        push    edx
+        push    eax
         call    near PATCHER_CALL_TRAP ;SoundSys_SetFrequency:0x004E6030
         .fixup2 = $-4
         add     esp,1*4
 
         .end:
+        pop     ebx
         ret
 endp
 
@@ -3947,29 +3993,62 @@ Flow_IsUnlimitedFPS:
 align 16
 Flow_IsInterpEnabled:
 
-        .check_interpolation:
-        cmp     dword[IniFile.NFL.EnableInterpolation],FALSE
-        je      .no
+        .get_interp_enabled:
+        mov     eax,dword[IniFile.NFL.EnableInterpolation]
+
+        .end:
+        retn    0
+
+align 16
+Flow_IsFPSLocked:
 
         .check_fpslock:
         cmp     dword[AppContext_isFPSLock],FALSE
-        jne     .no
+        jne     .yes
 
-        .yes:
-        mov     eax,TRUE
-        retn    0
+        .check_render_vars:
+        cmp     dword[Flow_isRenderTimerUsed],FALSE
+        je      .yes
+
+        .check_fpsl_mode:
+        cmp     dword[Flow_nCurFPSLimiterMode],NFL_FLOW_FPSLM_NORMAL
+        jne     .yes
+
+        .check_fpsl_rendermode:
+        cmp     dword[Flow_nCurFPSLimiterRenderMode],NFL_FLOW_FPSLRM_SYNCED
+        je      .yes
+
+        .check_appactive: ; not really applicable to igi 1
+        cmp     dword[PATCHER_ADDR_TRAP],FALSE ;AppContext.isActive:0x005C8BFC
+        .fixup1 = $-1-4
+        je      .yes
 
         .no:
         xor     eax,eax
+        retn    0
+
+        .yes:
+        mov     eax,TRUE
         retn    0
 
 align 16
 Flow_IsInterpSuppressed:
 
         .check_interp_enabled:
-        ccall   Flow_IsInterpEnabled
+        ;ccall   Flow_IsInterpEnabled
+        ;test    eax,eax
+        ;jz      .yes
+        cmp     dword[IniFile.NFL.EnableInterpolation],FALSE
+        je      .yes
+
+        .check_fps_locked:
+        ccall   Flow_IsFPSLocked
         test    eax,eax
-        jz      .yes
+        jnz     .yes
+
+        .check_render_vars:
+        cmp     dword[Flow_IsRenderFasterThanGLogic],FALSE
+        je      .yes
 
         .check_cutscene: ; bugged for some reason
         cmp     dword[CutScene_isRunning],FALSE
@@ -3978,17 +4057,6 @@ Flow_IsInterpSuppressed:
         .check_stationarygun: ; bugged, temporary disabled
         cmp     dword[StationaryGun_isUsedByPlayer],FALSE
         jne     .yes
-
-        .check_slowdown:
-        mov     ecx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
-        .fixup1 = $-4
-        cmp     dword[ecx+40h],10 ;ptFlow->nTicksSinceRedraw
-        jg      .yes
-
-        .check_appactive:
-        cmp     dword[PATCHER_ADDR_TRAP],FALSE ;AppContext.isActive:0x005C8BFC
-        .fixup2 = $-1-4
-        je      .yes
 
         .no:
         xor     eax,eax
@@ -4120,7 +4188,8 @@ Flow_RunChildren:
         .update_vars:
         inc     dword[ebp+34h] ;ptFlow->nTicks
         inc     dword[ebp+40h] ;ptFlow->nTicksSinceRedraw
-        mov     byte[ebp+44h],FALSE ;ptFlow->isDrawn
+        ;mov     byte[ebp+44h],FALSE ;ptFlow->isDrawn
+        mov     dword[ebp+44h],0 ;ptFlow->nFramesSinceLastTick
 
         .end:
         mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_NONE
@@ -4178,6 +4247,10 @@ Flow_DrawChildren:
 
         push    ebx ebp esi edi
         mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_DRAW
+
+        .check_forbid_draw:
+        cmp     dword[Flow_isForbidDrawOneTick],FALSE
+        jne     .update_vars
 
         .init_vars:
         mov     esi,PATCHER_ADDR_TRAP ;QTask_atProtectedQTaskStack:0x00AFA6E0
@@ -4242,7 +4315,8 @@ Flow_DrawChildren:
         mov     eax,dword[esp+10h+.ptFlow]
         inc     dword[eax+38h] ;ptFlow->nFrames
         mov     dword[eax+40h],0 ;ptFlow->nTicksSinceRedraw
-        mov     byte[eax+44h],TRUE ;ptFlow->isDrawn
+        ;mov     byte[eax+44h],TRUE ;ptFlow->isDrawn
+        inc     dword[eax+44h] ;ptFlow->nFramesSinceLastTick
 
         .end:
         mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_NONE
@@ -4252,15 +4326,24 @@ Flow_DrawChildren:
 align 16
 loc_402260: ; Flow_RunHandler
 
-        .Flow_nDeltaTime = -10h+-10h
-        .Flow_nCurrentTime = -8
+        ;.Flow_nDeltaTime = -10h+-10h
+        ;.Flow_nCurrentTime = -8
+        .Flow_nDeltaTime = -8
         .ptFlow = 4
+
+        ;------------------------------------------------------------
+        ; prologue
+        ;------------------------------------------------------------
 
         .prologue:
         sub     esp,8
         push    ebx ebp esi edi
-        sub     esp,8 ; alloc 8 more bytes
-        mov     ebp,dword[esp+20h+.ptFlow]
+        ;sub     esp,8 ; alloc 8 more bytes
+        mov     ebp,dword[esp+18h+.ptFlow]
+
+        ;------------------------------------------------------------
+        ; handle frequency and refresh rate changes
+        ;------------------------------------------------------------
 
         .check_frequency:
         mov     eax,dword[ebp+3Ch] ;ptFlow->nFrequency
@@ -4269,17 +4352,25 @@ loc_402260: ; Flow_RunHandler
         .update_frequency:
         mov     dword[Flow_nCurrentFrequency],eax
         ccall   Flow_UpdateGLogicTimestep,ebp
+        ccall   Flow_UpdateRenderMode
 
         .check_refreshrate:
         mov     eax,dword[Display_nCurrentRefreshRate]
         cmp     eax,dword[Flow_nCurrentRefreshRate]
-        je      .check_movie_playing
+        je      .check_fpslimiter_mode
         .update_refreshrate:
         mov     dword[Flow_nCurrentRefreshRate],eax
         ccall   Flow_GetMaxRenderFPS
         mov     dword[Flow_nRefreshRate],eax
         ccall   Flow_UpdateRenderTimestep,ebp
+        ccall   Flow_UpdateRenderMode
         ccall   Flow_UpdateCInputDynTimestep,ebp
+
+        ;------------------------------------------------------------
+        ; check fps limiter mode
+        ;------------------------------------------------------------
+
+        .check_fpslimiter_mode:
 
         .check_movie_playing:
         ccall   Movie_IsPlaying_NEW
@@ -4291,33 +4382,48 @@ loc_402260: ; Flow_RunHandler
         test    eax,eax
         jnz     .unlimited_fps_on
 
-        .unlimited_fps_off:
+        ;------------------------------------------------------------
+        ; normal mode
+        ;------------------------------------------------------------
+
+        .normal_mode:
+        mov     dword[Flow_nCurFPSLimiterMode],NFL_FLOW_FPSLM_NORMAL
+        mov     dword[Flow_nCurFPSLimiterRenderMode],NFL_FLOW_FPSLRM_NOT_SET
+
+        ;------------------------------------------------------------
+        ; cinput phase
+        ;------------------------------------------------------------
 
         .cinput_get_time:
         ccall   AccTimer_Read
-        mov     dword[esp+20h+.Flow_nCurrentTime],eax
-        mov     dword[esp+20h+.Flow_nCurrentTime+4],edx
+        mov     esi,eax
+        mov     edi,edx
         sub     eax,dword[Flow_nCInputLastTime]
         sbb     edx,dword[Flow_nCInputLastTime+4]
 
         .cinput_check_deltatime:
         sub     eax,dword[Flow_nCInputTimestep]
         sbb     edx,dword[Flow_nCInputTimestep+4]
-        jb      .glogic_get_time
+        jb      .glogic_phase
 
         .cinput_update_vars:
-        mov     ebx,dword[esp+20h+.Flow_nCurrentTime]
-        mov     ecx,dword[esp+20h+.Flow_nCurrentTime+4]
-        mov     dword[Flow_nCInputLastTime],ebx
-        mov     dword[Flow_nCInputLastTime+4],ecx
+        mov     dword[Flow_nCInputLastTime],esi
+        mov     dword[Flow_nCInputLastTime+4],edi
 
         .cinput_update:
-        ccall   Input_Update,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_UpdateCInput,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ;jmp     .glogic_phase
+
+        ;------------------------------------------------------------
+        ; glogic phase
+        ;------------------------------------------------------------
+
+        .glogic_phase:
 
         .glogic_get_time:
         ccall   AccTimer_Read
-        mov     dword[esp+20h+.Flow_nCurrentTime],eax
-        mov     dword[esp+20h+.Flow_nCurrentTime+4],edx
+        mov     esi,eax
+        mov     edi,edx
 
         .glogic_check_updatetime:
         cmp     dword[ebp+40h],10 ;ptFlow->nTicksSinceRedraw
@@ -4328,7 +4434,7 @@ loc_402260: ; Flow_RunHandler
         adc     ecx,dword[Flow_nSkipTime+4]
         sub     eax,ebx
         sbb     edx,ecx
-        jb      .render_get_time
+        jb      .render_phase
 
         .glogic_update_vars:
         fld     qword[Flow_vGLogicTimestepAcc]
@@ -4341,8 +4447,8 @@ loc_402260: ; Flow_RunHandler
         mov     edx,ecx
         neg     edx
         and     edx,1.0
-        mov     dword[esp+20h+.ptFlow],edx ; temp var
-        fsub    dword[esp+20h+.ptFlow]
+        mov     dword[esp+18h+.ptFlow],edx ; temp var
+        fsub    dword[esp+18h+.ptFlow]
         fstp    qword[Flow_vGLogicTimestepAcc] ; Flow_vGLogicTimestepAcc -= (Flow_vGLogicTimestepAcc + Flow_vGLogicTimestepAccAdd >= 1.0) ? 1.0 : 0.0
         mov     dword[Flow_nGLogicTimestepAdd],ecx
         mov     ebx,dword[Flow_nGLogicUpdateTime]
@@ -4351,58 +4457,58 @@ loc_402260: ; Flow_RunHandler
         adc     ecx,dword[Flow_nGLogicTimestep+4]
         add     ebx,dword[Flow_nGLogicTimestepAdd]
         adc     ecx,0
-        mov     dword[Flow_nGLogicUpdateTime],ebx
-        mov     dword[Flow_nGLogicUpdateTime+4],ecx
-        mov     eax,dword[esp+20h+.Flow_nCurrentTime]
-        mov     edx,dword[esp+20h+.Flow_nCurrentTime+4]
-        mov     ebx,eax
-        mov     ecx,edx
+        mov     eax,esi
+        mov     edx,edi
         sub     eax,dword[Flow_nGLogicLastTime]
         sbb     edx,dword[Flow_nGLogicLastTime+4]
+        mov     dword[Flow_nGLogicUpdateTime],ebx
+        mov     dword[Flow_nGLogicUpdateTime+4],ecx
+        mov     dword[Flow_nGLogicLastTime],esi
+        mov     dword[Flow_nGLogicLastTime+4],edi
         mov     dword[Flow_nGLogicDeltaTime],eax
         mov     dword[Flow_nGLogicDeltaTime+4],edx
-        mov     dword[Flow_nGLogicLastTime],ebx
-        mov     dword[Flow_nGLogicLastTime+4],ecx
         mov     dword[Flow_nSkipTime],0
         mov     dword[Flow_nSkipTime+4],0
 
         .glogic_run:
         ccall   Flow_CalcGLogicFPS
-        ccall   Input_UpdateOnRun,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_UpdateInputOnRun,dword[ebp+24h] ;ptFlow->ptInputPortQTask
         ccall   Flow_RunChildren,ebp
+
+        .print_fps_counter:
+        ccall   Flow_PrintFPSCounter
         jmp     .back
 
         .glogic_slowdown:
-        xor     ecx,ecx
-        mov     dword[ebp+40h],ecx ;ptFlow->nTicksSinceRedraw
-        mov     eax,dword[esp+20h+.Flow_nCurrentTime]
-        mov     edx,dword[esp+20h+.Flow_nCurrentTime+4]
-        mov     dword[Flow_nCInputLastTime],eax
-        mov     dword[Flow_nCInputLastTime+4],edx
-        mov     dword[Flow_nGLogicUpdateTime],eax
-        mov     dword[Flow_nGLogicUpdateTime+4],edx
-        mov     dword[Flow_nGLogicLastTime],eax
-        mov     dword[Flow_nGLogicLastTime+4],edx
-        mov     dword[Flow_nRenderLastTime],eax
-        mov     dword[Flow_nRenderLastTime+4],edx
-        mov     dword[Flow_nSkipTime],ecx
-        mov     dword[Flow_nSkipTime+4],ecx
-        mov     dword[Flow_vGLogicTimestepAcc],ecx
-        mov     dword[Flow_vGLogicTimestepAcc+4],ecx
-        mov     dword[Flow_nGLogicTimestepAdd],ecx
-        mov     dword[Flow_vRenderTimestepAcc],ecx
-        mov     dword[Flow_vRenderTimestepAcc+4],ecx
-        mov     dword[Flow_nRenderTimestepAdd],ecx
-        ;jmp     .render_get_time
+        ccall   Flow_ResetTimings,ebp,FALSE,eax,edx
+        ;jmp     .render_phase
+
+        ;------------------------------------------------------------
+        ; check render mode
+        ;------------------------------------------------------------
+
+        .render_phase:
+
+        .check_fps_locked:
+        ccall   Flow_IsFPSLocked
+        test    eax,eax
+        jnz     .render_synced
+
+        ;------------------------------------------------------------
+        ; render phase (asynchronous)
+        ;------------------------------------------------------------
+
+        .render_async:
+        mov     dword[Flow_nCurFPSLimiterRenderMode],NFL_FLOW_FPSLRM_ASYNC
 
         .render_get_time:
         ccall   AccTimer_Read
-        mov     dword[esp+20h+.Flow_nCurrentTime],eax
-        mov     dword[esp+20h+.Flow_nCurrentTime+4],edx
+        mov     esi,eax
+        mov     edi,edx
         sub     eax,dword[Flow_nRenderLastTime]
         sbb     edx,dword[Flow_nRenderLastTime+4]
-        mov     dword[esp+20h+.Flow_nDeltaTime],eax
-        mov     dword[esp+20h+.Flow_nDeltaTime+4],edx
+        mov     dword[esp+18h+.Flow_nDeltaTime],eax
+        mov     dword[esp+18h+.Flow_nDeltaTime+4],edx
 
         .render_check_deltatime:
         mov     ebx,dword[Flow_nRenderTimestep]
@@ -4414,14 +4520,6 @@ loc_402260: ; Flow_RunHandler
         jb      .back
 
         .render_update_vars:
-        mov     ebx,dword[esp+20h+.Flow_nCurrentTime]
-        mov     ecx,dword[esp+20h+.Flow_nCurrentTime+4]
-        mov     eax,dword[esp+20h+.Flow_nDeltaTime]
-        mov     edx,dword[esp+20h+.Flow_nDeltaTime+4]
-        mov     dword[Flow_nRenderLastTime],ebx
-        mov     dword[Flow_nRenderLastTime+4],ecx
-        mov     dword[Flow_nRenderDeltaTime],eax
-        mov     dword[Flow_nRenderDeltaTime+4],edx
         fld     qword[Flow_vRenderTimestepAcc]
         fadd    dword[Flow_vRenderTimestepAccAdd]
         fcom    dword[FPU_CONSTS.flt_1_0]
@@ -4432,33 +4530,76 @@ loc_402260: ; Flow_RunHandler
         mov     edx,ecx
         neg     edx
         and     edx,1.0
-        mov     dword[esp+20h+.ptFlow],edx ; temp var
-        fsub    dword[esp+20h+.ptFlow]
+        mov     dword[esp+18h+.ptFlow],edx ; temp var
+        fsub    dword[esp+18h+.ptFlow]
         fstp    qword[Flow_vRenderTimestepAcc] ; Flow_vRenderTimestepAcc -= (Flow_vRenderTimestepAcc + Flow_vRenderTimestepAccAdd >= 1.0) ? 1.0 : 0.0
         mov     dword[Flow_nRenderTimestepAdd],ecx
+        mov     eax,dword[esp+18h+.Flow_nDeltaTime]
+        mov     edx,dword[esp+18h+.Flow_nDeltaTime+4]
+        mov     dword[Flow_nRenderLastTime],esi
+        mov     dword[Flow_nRenderLastTime+4],edi
+        mov     dword[Flow_nRenderDeltaTime],eax
+        mov     dword[Flow_nRenderDeltaTime+4],edx
 
-        .render_run:
-        ccall   Flow_CalcRenderFPS
-        ;ccall   Flow_DrawFPSCounter
+        .render_check_interp:
         ccall   Flow_IsInterpSuppressed
         test    eax,eax
         jnz     .render_draw
 
         .render_drawinterp:
+        ccall   Flow_CalcRenderFPS
         ccall   Flow_CalcDrawDeltaTime
         ;ccall   Flow_CalcAnimsInterpTime
-        ccall   Input_UpdateOnInterp,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_UpdateInputOnInterp,dword[ebp+24h] ;ptFlow->ptInputPortQTask
         ccall   Flow_InterpChildren;,ebp
-        ccall   Input_UpdateOnDraw,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_UpdateInputOnDraw,dword[ebp+24h] ;ptFlow->ptInputPortQTask
         ccall   Flow_DrawChildren,ebp
+        ccall   Flow_UpdateFPSCounter
         jmp     .back
 
         .render_draw:
-        cmp     dword[ebp+40h],0 ;ptFlow->nTicksSinceRedraw
-        je      .back
-        ccall   Input_UpdateOnDraw,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_CalcRenderFPS
+        ccall   Flow_UpdateInputOnInterp,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_UpdateInputOnDraw,dword[ebp+24h] ;ptFlow->ptInputPortQTask
         ccall   Flow_DrawChildren,ebp
+        ccall   Flow_UpdateFPSCounter
+        jmp     .back
+
+        ;------------------------------------------------------------
+        ; render phase (synchronized)
+        ;------------------------------------------------------------
+
+        .render_synced:
+        mov     dword[Flow_nCurFPSLimiterRenderMode],NFL_FLOW_FPSLRM_SYNCED
+
+        .render_synced_check_drawn:
+        cmp     dword[ebp+44h],0 ;ptFlow->nFramesSinceLastTick
+        jne     .back
+
+        .render_synced_get_time:
+        ccall   AccTimer_Read
+
+        .render_synced_update_vars:
+        mov     esi,eax
+        mov     edi,edx
+        sub     eax,dword[Flow_nRenderLastTime]
+        sbb     edx,dword[Flow_nRenderLastTime+4]
+        mov     dword[Flow_nRenderLastTime],esi
+        mov     dword[Flow_nRenderLastTime+4],edi
+        mov     dword[Flow_nRenderDeltaTime],eax
+        mov     dword[Flow_nRenderDeltaTime+4],edx
+
+        .render_synced_draw:
+        ccall   Flow_CalcRenderFPS
+        ccall   Flow_UpdateInputOnInterp,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_UpdateInputOnDraw,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_DrawChildren,ebp
+        ccall   Flow_UpdateFPSCounter
         ;jmp     .back
+
+        ;------------------------------------------------------------
+        ; jump back to handle events
+        ;------------------------------------------------------------
 
         .back:
         mov     eax,ebp
@@ -4467,23 +4608,44 @@ loc_402260: ; Flow_RunHandler
         je      .skip_forbid_draw
         mov     dword[Flow_isForbidDrawOneTick],TRUE
         .skip_forbid_draw:
-        add     esp,8
+        ;add     esp,8
         jmp     near PATCHER_JUMP_TRAP ;loc_40262E
         .fixup1 = $-4
 
-        .unlimited_fps_on:
-        ccall   Input_Update,dword[ebp+24h] ;ptFlow->ptInputPortQTask
-        ccall   Input_UpdateOnRun,dword[ebp+24h] ;ptFlow->ptInputPortQTask
-        ccall   Flow_RunChildren,ebp
-        ccall   Input_UpdateOnDraw,dword[ebp+24h] ;ptFlow->ptInputPortQTask
-        ccall   Flow_DrawChildren,ebp
-        jmp     .back
+        ;------------------------------------------------------------
+        ; play movie mode
+        ;------------------------------------------------------------
 
         .movie_playing:
-        ccall   Input_Update,dword[ebp+24h] ;ptFlow->ptInputPortQTask
-        ccall   Input_UpdateOnRun,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        mov     dword[Flow_nCurFPSLimiterMode],NFL_FLOW_FPSLM_MOVIE
+        mov     dword[Flow_nCurFPSLimiterRenderMode],NFL_FLOW_FPSLRM_SYNCED
+        ccall   Flow_UpdateCInput,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_CalcGLogicFPS
+        ccall   Flow_UpdateInputOnRun,dword[ebp+24h] ;ptFlow->ptInputPortQTask
         ccall   Flow_RunChildren,ebp
+        ccall   Flow_CalcRenderFPS
+        ccall   Flow_UpdateInputOnInterp,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_UpdateInputOnDraw,dword[ebp+24h] ;ptFlow->ptInputPortQTask
         inc     dword[ebp+38h] ;ptFlow->nFrames
+        ccall   Flow_UpdateFPSCounter
+        jmp     .back
+
+        ;------------------------------------------------------------
+        ; unlimited fps mode
+        ;------------------------------------------------------------
+
+        .unlimited_fps_on:
+        mov     dword[Flow_nCurFPSLimiterMode],NFL_FLOW_FPSLM_UNLIMITED
+        mov     dword[Flow_nCurFPSLimiterRenderMode],NFL_FLOW_FPSLRM_SYNCED
+        ccall   Flow_UpdateCInput,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_CalcGLogicFPS
+        ccall   Flow_UpdateInputOnRun,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_RunChildren,ebp
+        ccall   Flow_CalcRenderFPS
+        ccall   Flow_UpdateInputOnInterp,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_UpdateInputOnDraw,dword[ebp+24h] ;ptFlow->ptInputPortQTask
+        ccall   Flow_DrawChildren,ebp
+        ccall   Flow_UpdateFPSCounter
         jmp     .back
 
 proc Flow_UpdateCInputTimestep c ptFlow
@@ -4590,7 +4752,7 @@ proc Flow_UpdateGLogicTimestep c ptFlow
         ret
 endp
 
-proc Flow_GetMaxRenderFPS
+proc Flow_GetMaxRenderFPS c
 
         .get_maxfps_setting:
         mov     eax,dword[IniFile.NFL.MaxRenderFPS]
@@ -4668,12 +4830,38 @@ proc Flow_UpdateRenderTimestep c ptFlow
         ret
 endp
 
+proc Flow_UpdateRenderMode c
+
+        ;locals
+        ;        vGLogicFPSMargin dd 1.0
+        ;        vRenderFPSMargin dd 1.1
+        ;endl
+
+        fild    qword[Flow_nGLogicTimestep]
+        fadd    dword[Flow_vGLogicTimestepAccAdd]
+        ;fmul    dword[vGLogicFPSMargin]
+        fild    qword[Flow_nRenderTimestep]
+        fadd    dword[Flow_vRenderTimestepAccAdd]
+        ;fmul    dword[vRenderFPSMargin]
+        fcompp
+        fnstsw  ax
+        xor     ecx,ecx
+        xor     edx,edx
+        test    ah,40h
+        setz    cl ; true if render fps != logic fps
+        test    ah,1
+        setnz   dl ; true if render fps > logic fps (render timestep < logic timestep)
+        mov     dword[Flow_isRenderTimerUsed],ecx
+        mov     dword[Flow_IsRenderFasterThanGLogic],edx
+        ret
+endp
+
 proc Flow_CalcGLogicFPS c
 
         fild    qword[Flow_nGLogicDeltaTime]
         fmul    qword[AccTimer_vToSecsConvMult]
         fdivr   dword[FPU_CONSTS.flt_1_0]
-        fstp    dword[Flow_vCurrentGLogicFPS]
+        fstp    qword[Flow_vCurrentGLogicFPS]
         ret
 endp
 
@@ -4682,7 +4870,132 @@ proc Flow_CalcRenderFPS c
         fild    qword[Flow_nRenderDeltaTime]
         fmul    qword[AccTimer_vToSecsConvMult]
         fdivr   dword[FPU_CONSTS.flt_1_0]
-        fstp    dword[Flow_vCurrentRenderFPS]
+        fstp    qword[Flow_vCurrentRenderFPS]
+        ret
+endp
+
+proc Flow_ResetFPSCounter c
+
+        xor     eax,eax
+
+        .reset:
+        mov     dword[Flow_nFPSCounterInterval],eax
+        mov     dword[Flow_nFPSCounterInterval+4],eax
+        mov     dword[Flow_vAverageGLogicFPS],eax
+        mov     dword[Flow_vAverageGLogicFPS+4],eax
+        mov     dword[Flow_vAverageRenderFPS],eax
+        mov     dword[Flow_vAverageRenderFPS+4],eax
+
+        .end:
+        ret
+endp
+
+proc Flow_UpdateFPSCounter c
+
+        locals
+                nTicks      dd ?
+                nFrames     dd ?
+        endl
+
+        push    ebx
+        mov     ebx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
+        .fixup1 = $-4
+
+        .check_enabled:
+        cmp     dword[IniFile.NFL.ShowFPSCounter],FALSE
+        je      .end
+
+        .check_interval_zero:
+        mov     ecx,dword[Flow_nFPSCounterInterval]
+        or      ecx,dword[Flow_nFPSCounterInterval+4]
+        jnz     .accumulate
+
+        .conv_interval:
+        fld     qword[Flow_vFPSCounterInterval]
+        fdiv    qword[AccTimer_vToSecsConvMult]
+        fistp   qword[Flow_nFPSCounterInterval]
+
+        .save_elapsed:
+        mov     eax,dword[Flow_nRenderDeltaTime]
+        mov     edx,dword[Flow_nRenderDeltaTime+4]
+        mov     dword[Flow_nFPSCounterElapsed],eax
+        mov     dword[Flow_nFPSCounterElapsed+4],edx
+
+        .save_counters:
+        mov     eax,dword[ebx+34h] ;ptFlow->nTicks
+        mov     edx,dword[ebx+38h] ;ptFlow->nFrames
+        mov     dword[Flow_nFPSCounterStartTicks],eax
+        mov     dword[Flow_nFPSCounterStartFrames],edx
+
+        .init_done:
+        jmp     .end
+
+        .accumulate:
+        mov     eax,dword[Flow_nRenderDeltaTime]
+        mov     edx,dword[Flow_nRenderDeltaTime+4]
+        add     dword[Flow_nFPSCounterElapsed],eax
+        adc     dword[Flow_nFPSCounterElapsed+4],edx
+
+        .check_interval:
+        mov     eax,dword[Flow_nFPSCounterElapsed]
+        mov     edx,dword[Flow_nFPSCounterElapsed+4]
+        sub     eax,dword[Flow_nFPSCounterInterval]
+        sbb     edx,dword[Flow_nFPSCounterInterval+4]
+        jc      .end
+
+        .calc_ticks:
+        mov     ecx,dword[ebx+34h] ;ptFlow->nTicks
+        sub     ecx,dword[Flow_nFPSCounterStartTicks]
+        mov     dword[nTicks],ecx
+
+        .calc_frames:
+        mov     ecx,dword[ebx+38h] ;ptFlow->nFrames
+        sub     ecx,dword[Flow_nFPSCounterStartFrames]
+        mov     dword[nFrames],ecx
+
+        .calc_avg_glogic_fps:
+        fild    dword[nTicks]
+        fild    qword[Flow_nFPSCounterElapsed]
+        fmul    qword[AccTimer_vToSecsConvMult]
+        fdivp   st1,st0
+        fstp    qword[Flow_vAverageGLogicFPS]
+
+        .calc_avg_render_fps:
+        fild    dword[nFrames]
+        fild    qword[Flow_nFPSCounterElapsed]
+        fmul    qword[AccTimer_vToSecsConvMult]
+        fdivp   st1,st0
+        fstp    qword[Flow_vAverageRenderFPS]
+
+        .set_next_interval:
+        ;mov     dword[Flow_nFPSCounterElapsed],eax
+        ;mov     dword[Flow_nFPSCounterElapsed+4],edx
+        mov     eax,dword[ebx+34h] ;ptFlow->nTicks
+        mov     ecx,dword[ebx+38h] ;ptFlow->nFrames
+        xor     edx,edx
+        mov     dword[Flow_nFPSCounterStartTicks],eax
+        mov     dword[Flow_nFPSCounterStartFrames],ecx
+        mov     dword[Flow_nFPSCounterElapsed],edx
+        mov     dword[Flow_nFPSCounterElapsed+4],edx
+
+        .end:
+        pop     ebx
+        ret
+endp
+
+proc Flow_PrintFPSCounter c
+
+        .check_enabled:
+        cmp     dword[IniFile.NFL.ShowFPSCounter],FALSE
+        je      .end
+
+        .print_avg_glogic_fps:
+        ccall   DebugText_printf_NEW,cstrGLogicFPSCounter,dword[Flow_vAverageGLogicFPS],dword[Flow_vAverageGLogicFPS+4]
+
+        .print_avg_render_fps:
+        ccall   DebugText_printf_NEW,cstrRenderFPSCounter,dword[Flow_vAverageRenderFPS],dword[Flow_vAverageRenderFPS+4]
+
+        .end:
         ret
 endp
 
@@ -5104,11 +5417,11 @@ loc_4719D3: ; VUMeter_Update
 
         .ptVUMeter = 4
 
-        .check_frame:
+        .check_1st_frame:
         mov     eax,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
         .fixup1 = $-4
-        cmp     dword[eax+40h],0 ;ptFlow->nTicksSinceRedraw
-        jne     .back
+        cmp     dword[eax+44h],0 ;ptFlow->nFramesSinceLastTick
+        je      .back
 
         .end:
         add     esp,8
@@ -5164,7 +5477,11 @@ loc_464D72: ; HumanView_UpdateBody
         .check_interp:
         call    Flow_IsInterpSuppressed
         test    eax,eax
-        jnz     .fps_locked
+        jnz     .interp_off
+
+        .check_phase:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+        jne     .back
 
         .calc_scaled_shake_time:
         mov     ecx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
@@ -5181,7 +5498,7 @@ loc_464D72: ; HumanView_UpdateBody
         test    ah,1
         jnz     .neg_shake_decay
         test    ah,40h
-        jnz     .back
+        jnz     .pop_fpu
 
         .pos_shake_decay:
         fsub    st0,st1
@@ -5189,9 +5506,9 @@ loc_464D72: ; HumanView_UpdateBody
         ftst
         fnstsw  ax
         test    ah,1
-        jz      .back
+        jz      .pop_fpu
         mov     dword[ebp+1B4h],0 ;ptHumanView->vShakeFactor
-        jmp     .back
+        jmp     .pop_fpu
 
         .neg_shake_decay:
         fadd    st0,st1
@@ -5199,16 +5516,18 @@ loc_464D72: ; HumanView_UpdateBody
         ftst
         fnstsw  ax
         test    ah,1
-        jnz     .back
+        jnz     .pop_fpu
         mov     dword[ebp+1B4h],0 ;ptHumanView->vShakeFactor
 
+        .pop_fpu:
+        fstp    st0
+        fstp    st0
+
         .back:
-        fstp    st0
-        fstp    st0
         jmp     near PATCHER_JUMP_TRAP ;loc_464DE2
         .fixup2 = $-4
 
-        .fps_locked:
+        .interp_off:
         fld     dword[ebp+1B4h]
         jmp     near PATCHER_JUMP_TRAP ;loc_464D78
         .fixup3 = $-4
@@ -5218,26 +5537,48 @@ loc_464E1B: ; HumanView_UpdateBody
         .check_interp:
         ccall   Flow_IsInterpSuppressed
         test    eax,eax
-        jz      .calc_impact_interp
+        jnz     .interp_off
 
-        .back:
-        fld     dword[ebp+1C8h] ;ptHumanView->vImpactAngle
-        jmp     near PATCHER_JUMP_TRAP ;loc_464E21
-        .fixup1 = $-4
+        .check_phase:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+        jne     .skip
 
-        .calc_impact_interp:
+        .interp_on:
+
+        .calc_impact:
         fild    qword[Flow_nRenderDeltaTime]
         fmul    qword[AccTimer_vToSecsConvMult]
         fmul    dword[PATCHER_ADDR_TRAP] ;flt_5334A8:0x005334A8 -> 6.2831855
-        .fixup2 = $-4
+        .fixup1 = $-4
         fadd    dword[ebp+1C8h] ;ptHumanView->vImpactAngle
         fst     dword[ebp+1C8h] ;ptHumanView->vImpactAngle
+
+        .back:
+        jmp     near PATCHER_JUMP_TRAP ;loc_464E2D
+        .fixup2 = $-4
+
+        .skip:
+        fld     dword[ebp+1C8h] ;ptHumanView->vImpactAngle
         jmp     near PATCHER_JUMP_TRAP ;loc_464E2D
         .fixup3 = $-4
+
+        .interp_off:
+        fld     dword[ebp+1C8h] ;ptHumanView->vImpactAngle
+        jmp     near PATCHER_JUMP_TRAP ;loc_464E21
+        .fixup4 = $-4
 
 loc_465102: ; HumanView_UpdateBody
 
         .vScaledStep = -10Ch
+
+        .check_interp:
+        call    Flow_IsInterpSuppressed
+        test    eax,eax
+        jnz     .interp_off
+
+        .check_phase:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+        jne     .back
 
         .check_retract_ideal:
         fld     dword[ebp+320h] ;ptHumanView->vRetractIdeal
@@ -5250,16 +5591,11 @@ loc_465102: ; HumanView_UpdateBody
         .returning_normal:
         fld     dword[PATCHER_ADDR_TRAP] ;flt_5339D8:0x005339D8 -> 75.851852f
         .fixup1 = $-4
-        jmp     .check_interp
+        jmp     .calc_scaled_step
 
         .hitting_wall:
         fld     dword[PATCHER_ADDR_TRAP] ;flt_5339D4:0x005339D4 -> 113.77778f
         .fixup2 = $-4
-
-        .check_interp:
-        call    Flow_IsInterpSuppressed
-        test    eax,eax
-        jnz     .fps_locked
 
         .calc_scaled_step:
         mov     ecx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
@@ -5268,8 +5604,6 @@ loc_465102: ; HumanView_UpdateBody
         fmul    qword[AccTimer_vToSecsConvMult]
         fimul   dword[ecx+3Ch] ;ptFlow->nFrequency
         fmulp   st1,st0
-
-        .fps_locked:
         fstp    dword[esp+140h+.vScaledStep]
 
         .cmp_ideal_vs_real:
@@ -5278,7 +5612,7 @@ loc_465102: ; HumanView_UpdateBody
         fcom    st1
         fnstsw  ax
         sahf
-        je      .back
+        je      .fpu_pop
         jb      .step_down
 
         .step_up:
@@ -5287,10 +5621,10 @@ loc_465102: ; HumanView_UpdateBody
         fcom    st1
         fnstsw  ax
         sahf
-        jbe     .back
+        jbe     .fpu_pop
         fstp    st0
         fld     st0
-        jmp     .back
+        jmp     .fpu_pop
 
         .step_down:
         fxch    st1
@@ -5298,24 +5632,35 @@ loc_465102: ; HumanView_UpdateBody
         fcom    st1
         fnstsw  ax
         sahf
-        jae     .back
+        jae     .fpu_pop
         fstp    st0
         fld     st0
 
-        .back:
+        .fpu_pop:
         fstp    dword[ebp+324h] ;ptHumanView->vRetractReal
         fstp    st0
+
+        .back:
         jmp     near PATCHER_JUMP_TRAP ;loc_4651F8
         .fixup4 = $-4
+
+        .interp_off:
+        fld     dword[ebp+320h] ;ptHumanView->vRetractIdeal
+        jmp     near PATCHER_JUMP_TRAP ;loc_465108
+        .fixup5 = $-4
 
 loc_465251: ; HumanView_UpdateBody
 
         .check_interp:
         call    Flow_IsInterpSuppressed
         test    eax,eax
-        jnz     .fps_locked
+        jnz     .interp_off
 
-        .fps_unlocked:
+        .check_phase:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+        jne     .back
+
+        .interp_on:
         mov     ecx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
         .fixup1 = $-4
         fild    qword[Flow_nRenderDeltaTime]
@@ -5380,14 +5725,14 @@ loc_465251: ; HumanView_UpdateBody
         fcomp   dword[ebp+1DCh] ;ptHumanView->vIdealObjectGamma
         fnstsw  ax
         test    ah,41h
-        jnz     .back
+        jnz     .pop_fpu
         mov     eax,dword[ebp+1DCh] ;ptHumanView->vIdealObjectGamma
         mov     dword[ebp+1D8h],eax ;ptHumanView->vObjectGamma
-        jmp     .back
+        jmp     .pop_fpu
 
         .check_gamma_sub:
         test    ah,41h
-        jnz     .back
+        jnz     .pop_fpu
         fld     dword[ebp+1E0h] ;ptHumanView->vStepGamma
         fmul    st0,st1
         fsubr   dword[ebp+1D8h] ;ptHumanView->vObjectGamma
@@ -5398,16 +5743,18 @@ loc_465251: ; HumanView_UpdateBody
         fcomp   dword[ebp+1DCh] ;ptHumanView->vIdealObjectGamma
         fnstsw  ax
         test    ah,1
-        jz      .back
+        jz      .pop_fpu
         mov     ecx,dword[ebp+1DCh] ;ptHumanView->vIdealObjectGamma
         mov     dword[ebp+1D8h],ecx ;ptHumanView->vObjectGamma
 
-        .back:
+        .pop_fpu:
         fstp    st0
+
+        .back:
         jmp     near PATCHER_JUMP_TRAP ;loc_46534D
         .fixup2 = $-4
 
-        .fps_locked:
+        .interp_off:
         fld     dword[ebp+1CCh] ;ptHumanView->vObjectAlpha
         jmp     near PATCHER_JUMP_TRAP ;loc_465257
         .fixup3 = $-4
@@ -5462,8 +5809,8 @@ loc_460C80: ; Human_printf
         .check_1st_frame:
         mov     ecx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
         .fixup1 = $-4
-        cmp     dword[ecx+40h],0 ;ptFlow->nTicksSinceRedraw
-        je      .end
+        cmp     dword[ecx+44h],0 ;ptFlow->nFramesSinceLastTick
+        jne     .end
 
         .back:
         mov     eax,dword[esp+.ptHuman]
@@ -5546,14 +5893,9 @@ loc_4828D0: ;HumanCamera_ControlListInput
 proc Flow_GetDrawDeltaTime c
 
         .check_stuff:
-        ;ccall   Flow_IsInterpSuppressed
-        ;test    eax,eax
-        ;jnz     .zero
         ccall   Game_IsPaused
         test    eax,eax
         jnz     .zero
-        ;cmp     dword[CutScene_isRunning],FALSE
-        ;jne     .zero ; cutscenes are already interpolated
 
         .get:
         fld     qword[Flow_vDrawDeltaTime]
@@ -5958,16 +6300,16 @@ proc QTask_IsBDCOTaskTypeInterpolable c ptQTask ; BoneDynCubeObj
         ret
 endp
 
-proc Flow_CalcInterpolatedPosByVel c ptExtrapPos,ptPos,ptSpeed
+proc Flow_CalcInterpolatedPosByVel c ptInterpPos,ptPos,ptSpeed
 
         .check_speed_ptr:
         cmp     dword[ptSpeed],NULL
-        je      .no_extrap
+        je      .no_interp
 
         .check_interp:
         ccall   Flow_IsInterpSuppressed
         test    eax,eax
-        jnz     .no_extrap
+        jnz     .no_interp
 
         .calc_alpha:
         ccall   Flow_GetDrawDeltaTime
@@ -5981,33 +6323,33 @@ proc Flow_CalcInterpolatedPosByVel c ptExtrapPos,ptPos,ptSpeed
         .calc_lerp:
         mov     eax,dword[ptSpeed] ; float
         mov     ecx,dword[ptPos] ; double
-        mov     edx,dword[ptExtrapPos] ; double
+        mov     edx,dword[ptInterpPos] ; double
 
         .lerp_posx:
         fld     st0 ;vAlpha
         fmul    dword[eax]
         fadd    qword[ecx]
-        fstp    qword[edx] ; ptExtrapPos->vX = ptPos->vX + ptSpeed->vX * vAlpha;
+        fstp    qword[edx] ; ptInterpPos->vX = ptPos->vX + ptSpeed->vX * vAlpha;
 
         .lerp_posy:
         fld     st0 ;vAlpha
         fmul    dword[eax+4]
         fadd    qword[ecx+8]
-        fstp    qword[edx+8] ; ptExtrapPos->vY = ptPos->vY + ptSpeed->vY * vAlpha;
+        fstp    qword[edx+8] ; ptInterpPos->vY = ptPos->vY + ptSpeed->vY * vAlpha;
 
         .lerp_posz:
         ;fld     st0 ;vAlpha
         fmul    dword[eax+8]
         fadd    qword[ecx+10h]
-        fstp    qword[edx+10h] ; ptExtrapPos->vZ = ptPos->vZ + ptSpeed->vZ * vAlpha;
+        fstp    qword[edx+10h] ; ptInterpPos->vZ = ptPos->vZ + ptSpeed->vZ * vAlpha;
 
         .ok:
         mov     eax,TRUE
         ret
 
-        .no_extrap:
+        .no_interp:
         mov     ecx,dword[ptPos]
-        mov     edx,dword[ptExtrapPos]
+        mov     edx,dword[ptInterpPos]
         cmp     ecx,edx
         je      .end
 
@@ -6024,16 +6366,16 @@ proc Flow_CalcInterpolatedPosByVel c ptExtrapPos,ptPos,ptSpeed
         ret
 endp
 
-proc Flow_CalcInterpolatedPosByVel32 c ptExtrapPos,ptPos,ptSpeed
+proc Flow_CalcInterpolatedPosByVel32 c ptInterpPos,ptPos,ptSpeed
 
         .check_speed_ptr:
         cmp     dword[ptSpeed],NULL
-        je      .no_extrap
+        je      .no_interp
 
         .check_interp:
         ccall   Flow_IsInterpSuppressed
         test    eax,eax
-        jnz     .no_extrap
+        jnz     .no_interp
 
         .calc_alpha:
         ccall   Flow_GetDrawDeltaTime
@@ -6047,33 +6389,33 @@ proc Flow_CalcInterpolatedPosByVel32 c ptExtrapPos,ptPos,ptSpeed
         .calc_lerp:
         mov     eax,dword[ptSpeed] ; float
         mov     ecx,dword[ptPos] ; float
-        mov     edx,dword[ptExtrapPos] ; float
+        mov     edx,dword[ptInterpPos] ; float
 
         .lerp_posx:
         fld     st0 ;vAlpha
         fmul    dword[eax]
         fadd    dword[ecx]
-        fstp    dword[edx] ; ptExtrapPos->vX = ptPos->vX + ptSpeed->vX * vAlpha;
+        fstp    dword[edx] ; ptInterpPos->vX = ptPos->vX + ptSpeed->vX * vAlpha;
 
         .lerp_posy:
         fld     st0 ;vAlpha
         fmul    dword[eax+4]
         fadd    dword[ecx+4]
-        fstp    dword[edx+4] ; ptExtrapPos->vY = ptPos->vY + ptSpeed->vY * vAlpha;
+        fstp    dword[edx+4] ; ptInterpPos->vY = ptPos->vY + ptSpeed->vY * vAlpha;
 
         .lerp_posz:
         ;fld     st0 ;vAlpha
         fmul    dword[eax+8]
         fadd    dword[ecx+8]
-        fstp    dword[edx+8] ; ptExtrapPos->vZ = ptPos->vZ + ptSpeed->vZ * vAlpha;
+        fstp    dword[edx+8] ; ptInterpPos->vZ = ptPos->vZ + ptSpeed->vZ * vAlpha;
 
         .ok:
         mov     eax,TRUE
         ret
 
-        .no_extrap:
+        .no_interp:
         mov     ecx,dword[ptPos]
-        mov     edx,dword[ptExtrapPos]
+        mov     edx,dword[ptInterpPos]
         cmp     ecx,edx
         je      .end
 
@@ -6747,6 +7089,141 @@ loc_4E0C8A: ; Shadow_MagicObjEnterHandler
         jmp     near PATCHER_JUMP_TRAP ;loc_4E0C8F
         .fixup1 = $-4
 
+proc Flow_UpdateCInput c ptInputPort
+
+        .update_hp_devices: ; update high priority devices (mouse)
+        call    near PATCHER_CALL_TRAP ;Mouse_Update:0x0048FC20
+        .fixup1 = $-4
+
+        .record_mouse_buttons:
+        ccall   Mouse_WriteBufferedButtons
+
+        .end:
+        ret
+endp
+
+proc Flow_UpdateInputOnRun c ptInputPort
+
+        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
+
+        .update_mouse_phases:
+        ccall   Mouse_UpdatePhaseInputs
+
+        .update_inputport:
+        ccall   InputPort_UpdateOnRun,dword[ptInputPort]
+
+        .end:
+        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_NONE
+        ret
+endp
+
+proc Flow_UpdateInputOnInterp c ptInputPort
+
+        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+
+        .update_mouse_phases:
+        ccall   Mouse_UpdatePhaseInputs
+
+        .update_inputport:
+        ccall   InputPort_UpdateOnInterp,dword[ptInputPort]
+
+        .end:
+        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_NONE
+        ret
+endp
+
+proc Flow_UpdateInputOnDraw c ptInputPort
+
+        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_DRAW
+
+        .update_mouse_phases:
+        ccall   Mouse_UpdatePhaseInputs
+
+        .update_inputport:
+        ccall   InputPort_UpdateOnDraw,dword[ptInputPort]
+
+        .end:
+        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_NONE
+        ret
+endp
+
+proc InputOptions_UpdateMouseSensitivity c
+
+        push    ebx
+
+        .get_config_ptr:
+        call    near PATCHER_CALL_TRAP ;Config_GetActivePlayerProfile:0x00406220
+        .fixup1 = $-4
+        mov     ebx,eax
+
+        .clamp_sens:
+        ;mov     ecx,dword[ebx+53Ch] ;ptPlayerProfile->tInputOptions.vMouseSensitivity
+        ;fld     dword[ebx+53Ch] ;ptPlayerProfile->tInputOptions.vMouseSensitivity
+        .lerp_sens:
+        fld     dword[InputOptions_vMaxMouseSensMult]
+        fsub    dword[InputOptions_vMinMouseSensMult]
+        fmul    dword[ebx+53Ch] ;ptPlayerProfile->tInputOptions.vMouseSensitivity
+        fadd    dword[InputOptions_vMinMouseSensMult]
+        .get_value:
+        push    ecx
+        fst     dword[esp]
+        pop     ecx
+        .clamp_max:
+        mov     edx,dword[InputOptions_vMaxMouseSensMult]
+        fcom    dword[InputOptions_vMaxMouseSensMult]
+        fnstsw  ax
+        test    ah,41h
+        setne   al
+        and     eax,1
+        neg     eax
+        sub     ecx,edx
+        and     ecx,eax
+        add     ecx,edx
+        .clamp_min:
+        mov     edx,dword[InputOptions_vMinMouseSensMult]
+        fcomp   dword[InputOptions_vMinMouseSensMult]
+        fnstsw  ax
+        test    ah,5
+        setp    al
+        and     eax,1
+        neg     eax
+        sub     ecx,edx
+        and     ecx,eax
+        add     ecx,edx
+
+        .save_sensx:
+        mov     dword[InputOptions_vCurMouseSensX],ecx
+
+        .save_sensy_ign_inv:
+        mov     edx,ecx
+        xor     edx,0x80000000 ; sign bit
+        mov     dword[InputOptions_vCurMouseSensYIgn],edx
+
+        .save_sensy:
+        mov     eax,0x80000000 ; sign bit
+        mov     edx,dword[ebx+538h] ;ptPlayerProfile->tInputOptions.isInvertMouse
+        neg     edx
+        sbb     edx,edx
+        and     eax,edx
+        xor     ecx,eax
+        mov     dword[InputOptions_vCurMouseSensY],ecx
+
+        .apply_custom_mult:
+        fld     dword[InputOptions_vCurMouseSensX]
+        fmul    dword[Mouse_vCustomSensMultX]
+        fstp    dword[InputOptions_vCurMouseSensX]
+        fld     dword[InputOptions_vCurMouseSensY]
+        fmul    dword[Mouse_vCustomSensMultY]
+        fstp    dword[InputOptions_vCurMouseSensY]
+        fld     dword[InputOptions_vCurMouseSensYIgn]
+        fmul    dword[Mouse_vCustomSensMultY]
+        fstp    dword[InputOptions_vCurMouseSensYIgn]
+
+        .end:
+        pop     ebx
+        ret
+endp
+
 proc Mouse_ClearInput c
 
         xor     eax,eax
@@ -6813,7 +7290,7 @@ loc_48FC7B: ; Mouse_Update
         .sMouseState.lY = -14h+4
 
         .check_locked:
-        cmp     byte[Mouse_tMouse_IsLocked],FALSE
+        cmp     byte[Mouse_IsLocked],FALSE
         jne     .locked
 
         .save_pos:
@@ -6835,6 +7312,44 @@ loc_48FC7B: ; Mouse_Update
         pop     esi
         add     esp,14h
         ret     0
+
+proc Mouse_WriteBufferedButtons c
+
+        .write_mouse_buffered_buttons:
+        mov     eax,dword[PATCHER_ADDR_TRAP] ;Mouse_tMouse.bButton:0x00C28F8C
+        .fixup1 = $-4
+        or      dword[Mouse_bButtonAcc],eax  
+
+        .end:
+        ret
+endp
+
+proc Mouse_ReadBufferedButtons c
+
+        .check_interp: ; skip buffered button handling if interp is disabled
+        ccall   Flow_IsInterpSuppressed
+        test    eax,eax
+        jnz     .end
+
+        .check_render_fps: ; skip buffered buttons handling if render fps < glogic fps
+        mov     ecx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
+        .fixup1 = $-4
+        ;cmp     dword[ecx+44h],0 ;ptFlow->nFramesSinceLastTick
+        cmp     dword[ecx+44h],eax ;ptFlow->nFramesSinceLastTick
+        je      .end
+
+        .read_mouse_buffered_buttons:
+        mov     edx,dword[Mouse_bButtonAcc]
+        mov     dword[PATCHER_ADDR_TRAP],edx ;Mouse_tMouse.bButton:0x00C28F8C
+        .fixup2 = $-4
+
+        .reset_mouse_buffered_buttons:
+        ;mov     dword[Mouse_bButtonAcc],0
+        mov     dword[Mouse_bButtonAcc],eax
+
+        .end:
+        ret
+endp
 
 proc Mouse_UpdatePhaseInputs c
 
@@ -6863,30 +7378,30 @@ proc Mouse_UpdatePhaseInputs c
         mov     dword[Mouse_nRelPositionY],ebp
 
         .loop_body:
-        fld     dword[Mouse_tMouse_avAnalogX_Acc+(ebx-1)*4]
+        fld     dword[Mouse_avAnalogX_Acc+(ebx-1)*4]
         fadd    st0,st2 ;ScaledRelPosX
-        fstp    dword[Mouse_tMouse_avAnalogX_Acc+(ebx-1)*4]
-        fld     dword[Mouse_tMouse_avAnalogY_Acc+(ebx-1)*4]
+        fstp    dword[Mouse_avAnalogX_Acc+(ebx-1)*4]
+        fld     dword[Mouse_avAnalogY_Acc+(ebx-1)*4]
         fadd    st0,st1 ;ScaledRelPosY
-        fstp    dword[Mouse_tMouse_avAnalogY_Acc+(ebx-1)*4]
+        fstp    dword[Mouse_avAnalogY_Acc+(ebx-1)*4]
 
         .get_pointers:
-        mov     esi,dword[Mouse_tMouse_apvAnalogX_Tbl+(ebx-1)*4]
-        mov     edi,dword[Mouse_tMouse_apvAnalogY_Tbl+(ebx-1)*4]
+        mov     esi,dword[Mouse_apvAnalogX_Tbl+(ebx-1)*4]
+        mov     edi,dword[Mouse_apvAnalogY_Tbl+(ebx-1)*4]
 
         .check_matching:
         test    ebx,eax
         jz      .phase_not_matched
 
         .phase_matched:
-        mov     ecx,dword[Mouse_tMouse_avAnalogX_Acc+(ebx-1)*4]
-        mov     edx,dword[Mouse_tMouse_avAnalogY_Acc+(ebx-1)*4]
+        mov     ecx,dword[Mouse_avAnalogX_Acc+(ebx-1)*4]
+        mov     edx,dword[Mouse_avAnalogY_Acc+(ebx-1)*4]
         mov     dword[esi],ecx
         mov     dword[edi],edx
 
         .zero_acc:
-        mov     dword[Mouse_tMouse_avAnalogX_Acc+(ebx-1)*4],ebp
-        mov     dword[Mouse_tMouse_avAnalogY_Acc+(ebx-1)*4],ebp
+        mov     dword[Mouse_avAnalogX_Acc+(ebx-1)*4],ebp
+        mov     dword[Mouse_avAnalogY_Acc+(ebx-1)*4],ebp
         jmp     .loop_next
 
         .phase_not_matched:
@@ -6899,8 +7414,8 @@ proc Mouse_UpdatePhaseInputs c
         jbe     .loop_body
 
         .loop_end:
-        fstp    dword[Mouse_tMouse_vAnalogY] ; same as Mouse_tMouse_vAnalogY_M111
-        fstp    dword[Mouse_tMouse_vAnalogX] ; same as Mouse_tMouse_vAnalogX_M111
+        fstp    dword[Mouse_vAnalogY] ; same as Mouse_vAnalogY_M111
+        fstp    dword[Mouse_vAnalogX] ; same as Mouse_vAnalogX_M111
 
         .end:
         pop     edi esi ebp ebx
@@ -6909,35 +7424,195 @@ endp
 
 proc InputPort_RunHandler_NEW c ptInputPort
 
-        ; do nothing
+        .reset_playerinput:
+        mov     dword[HumanPlayerInput_IsRunning],FALSE
+
+        .update_lp_devices: ; update low priority devices (keyboard, joypad)
+        call    near PATCHER_CALL_TRAP ;Keyboard_Update:0x00490230
+        .fixup1 = $-4
+        call    near PATCHER_CALL_TRAP ;Joypad_Update:0x00509CF0
+        .fixup2 = $-4
+
+        .update_mouse_buttons:
+        ccall   Mouse_ReadBufferedButtons
+
+        .update_sens_mult:
+        ccall   InputOptions_UpdateMouseSensitivity
+
+        .update_inputport:
+        ccall   InputPort_Update,dword[ptInputPort]
+
+        .end:
         ret
 endp
 
-proc InputPort_Update c ptInputPort ; TODO: support multiple ports
+proc InputPort_Update c ptInputPort
 
-        xor     ecx,ecx ; only InputPort.atInputPort[0] is ever used
+        push    ebx esi edi
+        mov     ebx,dword[ptInputPort]
 
-        .update:
-        mov     dword[PATCHER_ADDR_TRAP],ecx ;InputPort_eCurrentPort:0x00A5EF9C
+        .loop_init:
+        xor     esi,esi
+        xor     edi,edi
+
+        .loop_body:
+        lea     eax,[PATCHER_ADDR_TRAP+edi] ;InputPort.atInputPort[i]:0x00BC20A0
         .fixup1 = $-4
-        mov     edx,dword[ptInputPort]
-        imul    ecx,176
-        lea     eax,[PATCHER_ADDR_TRAP+ecx] ;InputPort.atInputPort[InputPort_eCurrentPort]:0x00BC20A0
-        .fixup2 = $-4
 
         .check_active:
-        cmp     dword[eax],FALSE ;InputPort.atInputPort[InputPort_eCurrentPort].isActive
-        je      .end
+        cmp     dword[eax],FALSE ;InputPort.atInputPort[i].isActive
+        je      .loop_next
 
-        .run:
-        add     eax,50h ;&InputPort.atInputPort[InputPort_eCurrentPort].tInput
-        push    edx
+        .update_input:
+        mov     dword[PATCHER_ADDR_TRAP],esi ;InputPort_eCurrentPort:0x00A5EF9C
+        .fixup2 = $-4
+        add     eax,50h ;&InputPort.atInputPort[i].tInput
+        push    ebx
         push    eax
         call    near PATCHER_CALL_TRAP ;Input_Run:0x00507EC0
         .fixup3 = $-4
         add     esp,2*4
 
+        .loop_next:
+        inc     esi
+        add     edi,176 ;sizeof(InputPort_s)
+        cmp     esi,4
+        jl      .loop_body
+
         .end:
+        pop      edi esi ebx
+        ret
+endp
+
+proc InputPort_UpdateOnRun c ptInputPort
+
+        push    esi edi
+
+        .get_cur_port:
+        mov     eax,dword[PATCHER_ADDR_TRAP] ;InputPort_eCurrentPort:0x00A5EF9C
+        .fixup1 = $-4
+
+        .is_port_0:
+        test    eax,eax
+        jnz     .end
+
+        .get_analog_device:
+        imul    eax,176 ;sizeof(InputPort_s)
+        mov     eax,dword[PATCHER_ADDR_TRAP+eax] ;InputPort.atInputPort[InputPort_eCurrentPort].eAnalogInputPortDevice:0x00BC20AC
+        .fixup2 = $-4
+
+        .is_mouse:
+        cmp     eax,3 ;INPUTPORT_DEVICE_MOUSE
+        jne     .end
+
+        .update_mouse: ; TODO: clamp values to -1.0 ~ 1.0?
+        mov     ecx,dword[Mouse_vAnalogX_M100]
+        mov     edx,dword[Mouse_vAnalogY_M100]
+        mov     esi,dword[Mouse_vAnalogX_M110]
+        mov     edi,dword[Mouse_vAnalogY_M110]
+        mov     dword[InputPort_P0Input_vAnalogX_M100],ecx
+        mov     dword[InputPort_P0Input_vAnalogY_M100],edx
+        mov     dword[InputPort_P0Input_vAnalogX_M110],esi
+        mov     dword[InputPort_P0Input_vAnalogY_M110],edi
+        mov     ecx,dword[Mouse_vAnalogX_M101]
+        mov     edx,dword[Mouse_vAnalogY_M101]
+        mov     esi,dword[Mouse_vAnalogX_M111]
+        mov     edi,dword[Mouse_vAnalogY_M111]
+        mov     dword[InputPort_P0Input_vAnalogX_M101],ecx
+        mov     dword[InputPort_P0Input_vAnalogY_M101],edx
+        mov     dword[InputPort_P0Input_vAnalogX_M111],esi
+        mov     dword[InputPort_P0Input_vAnalogY_M111],edi
+
+        .end:
+        pop     edi esi
+        ret
+endp
+
+proc InputPort_UpdateOnInterp c ptInputPort
+
+        push    esi edi
+
+        .get_cur_port:
+        mov     eax,dword[PATCHER_ADDR_TRAP] ;InputPort_eCurrentPort:0x00A5EF9C
+        .fixup1 = $-4
+
+        .is_port_0:
+        test    eax,eax
+        jnz     .end
+
+        .get_analog_device:
+        imul    eax,176 ;sizeof(InputPort_s)
+        mov     eax,dword[PATCHER_ADDR_TRAP+eax] ;InputPort.atInputPort[InputPort_eCurrentPort].eAnalogInputPortDevice:0x00BC20AC
+        .fixup2 = $-4
+
+        .is_mouse:
+        cmp     eax,3 ;INPUTPORT_DEVICE_MOUSE
+        jne     .end
+
+        .update_mouse: ; TODO: clamp values to -1.0 ~ 1.0?
+        mov     ecx,dword[Mouse_vAnalogX_M010]
+        mov     edx,dword[Mouse_vAnalogY_M010]
+        mov     esi,dword[Mouse_vAnalogX_M110]
+        mov     edi,dword[Mouse_vAnalogY_M110]
+        mov     dword[InputPort_P0Input_vAnalogX_M010],ecx
+        mov     dword[InputPort_P0Input_vAnalogY_M010],edx
+        mov     dword[InputPort_P0Input_vAnalogX_M110],esi
+        mov     dword[InputPort_P0Input_vAnalogY_M110],edi
+        mov     ecx,dword[Mouse_vAnalogX_M011]
+        mov     edx,dword[Mouse_vAnalogY_M011]
+        mov     esi,dword[Mouse_vAnalogX_M111]
+        mov     edi,dword[Mouse_vAnalogY_M111]
+        mov     dword[InputPort_P0Input_vAnalogX_M011],ecx
+        mov     dword[InputPort_P0Input_vAnalogY_M011],edx
+        mov     dword[InputPort_P0Input_vAnalogX_M111],esi
+        mov     dword[InputPort_P0Input_vAnalogY_M111],edi
+
+        .end:
+        pop     edi esi
+        ret
+endp
+
+proc InputPort_UpdateOnDraw c ptInputPort
+
+        push    esi edi
+
+        .get_cur_port:
+        mov     eax,dword[PATCHER_ADDR_TRAP] ;InputPort_eCurrentPort:0x00A5EF9C
+        .fixup1 = $-4
+
+        .is_port_0:
+        test    eax,eax
+        jnz     .end
+
+        .get_analog_device:
+        imul    eax,176 ;sizeof(InputPort_s)
+        mov     eax,dword[PATCHER_ADDR_TRAP+eax] ;InputPort.atInputPort[InputPort_eCurrentPort].eAnalogInputPortDevice:0x00BC20AC
+        .fixup2 = $-4
+
+        .is_mouse:
+        cmp     eax,3 ;INPUTPORT_DEVICE_MOUSE
+        jne     .end
+
+        .update_mouse: ; TODO: clamp values to -1.0 ~ 1.0?
+        mov     ecx,dword[Mouse_vAnalogX_M001]
+        mov     edx,dword[Mouse_vAnalogY_M001]
+        mov     esi,dword[Mouse_vAnalogX_M101]
+        mov     edi,dword[Mouse_vAnalogY_M101]
+        mov     dword[InputPort_P0Input_vAnalogX_M001],ecx
+        mov     dword[InputPort_P0Input_vAnalogY_M001],edx
+        mov     dword[InputPort_P0Input_vAnalogX_M101],esi
+        mov     dword[InputPort_P0Input_vAnalogY_M101],edi
+        mov     ecx,dword[Mouse_vAnalogX_M011]
+        mov     edx,dword[Mouse_vAnalogY_M011]
+        mov     esi,dword[Mouse_vAnalogX_M111]
+        mov     edi,dword[Mouse_vAnalogY_M111]
+        mov     dword[InputPort_P0Input_vAnalogX_M011],ecx
+        mov     dword[InputPort_P0Input_vAnalogY_M011],edx
+        mov     dword[InputPort_P0Input_vAnalogX_M111],esi
+        mov     dword[InputPort_P0Input_vAnalogY_M111],edi
+
+        .end:
+        pop     edi esi
         ret
 endp
 
@@ -7044,79 +7719,6 @@ loc_4ED420: ; InputPort_InputHandler
         mov     dword[esi+4],eax ;ptInput->vAnalogX
         mov     dword[esi+8],ecx ;ptInput->vAnalogY
 
-        .is_mouse:
-        cmp     ebp,3 ;INPUTPORT_DEVICE_MOUSE
-        jne     .end
-
-        ; TODO: clamp values to -1.0 ~ 1.0?
-
-        .get_phase:
-        mov     eax,dword[Flow_nCurrentPhase]
-        cmp     eax,NFL_FLOW_PHASE_RUN
-        je      .phase_run
-        cmp     eax,NFL_FLOW_PHASE_INTERP
-        je      .phase_interp
-        cmp     eax,NFL_FLOW_PHASE_DRAW
-        je      .phase_draw
-        jmp     .end
-
-        .phase_run:
-        mov     ecx,dword[Mouse_tMouse_vAnalogX_M100]
-        mov     edx,dword[Mouse_tMouse_vAnalogY_M100]
-        mov     esi,dword[Mouse_tMouse_vAnalogX_M110]
-        mov     edi,dword[Mouse_tMouse_vAnalogY_M110]
-        mov     dword[InputPort_P0Input_vAnalogX_M100],ecx
-        mov     dword[InputPort_P0Input_vAnalogY_M100],edx
-        mov     dword[InputPort_P0Input_vAnalogX_M110],esi
-        mov     dword[InputPort_P0Input_vAnalogY_M110],edi
-        mov     ecx,dword[Mouse_tMouse_vAnalogX_M101]
-        mov     edx,dword[Mouse_tMouse_vAnalogY_M101]
-        mov     esi,dword[Mouse_tMouse_vAnalogX_M111]
-        mov     edi,dword[Mouse_tMouse_vAnalogY_M111]
-        mov     dword[InputPort_P0Input_vAnalogX_M101],ecx
-        mov     dword[InputPort_P0Input_vAnalogY_M101],edx
-        mov     dword[InputPort_P0Input_vAnalogX_M111],esi
-        mov     dword[InputPort_P0Input_vAnalogY_M111],edi
-        jmp     .end
-
-        .phase_interp:
-        mov     ecx,dword[Mouse_tMouse_vAnalogX_M010]
-        mov     edx,dword[Mouse_tMouse_vAnalogY_M010]
-        mov     esi,dword[Mouse_tMouse_vAnalogX_M110]
-        mov     edi,dword[Mouse_tMouse_vAnalogY_M110]
-        mov     dword[InputPort_P0Input_vAnalogX_M010],ecx
-        mov     dword[InputPort_P0Input_vAnalogY_M010],edx
-        mov     dword[InputPort_P0Input_vAnalogX_M110],esi
-        mov     dword[InputPort_P0Input_vAnalogY_M110],edi
-        mov     ecx,dword[Mouse_tMouse_vAnalogX_M011]
-        mov     edx,dword[Mouse_tMouse_vAnalogY_M011]
-        mov     esi,dword[Mouse_tMouse_vAnalogX_M111]
-        mov     edi,dword[Mouse_tMouse_vAnalogY_M111]
-        mov     dword[InputPort_P0Input_vAnalogX_M011],ecx
-        mov     dword[InputPort_P0Input_vAnalogY_M011],edx
-        mov     dword[InputPort_P0Input_vAnalogX_M111],esi
-        mov     dword[InputPort_P0Input_vAnalogY_M111],edi
-        jmp     .end
-
-        .phase_draw:
-        mov     ecx,dword[Mouse_tMouse_vAnalogX_M001]
-        mov     edx,dword[Mouse_tMouse_vAnalogY_M001]
-        mov     esi,dword[Mouse_tMouse_vAnalogX_M101]
-        mov     edi,dword[Mouse_tMouse_vAnalogY_M101]
-        mov     dword[InputPort_P0Input_vAnalogX_M001],ecx
-        mov     dword[InputPort_P0Input_vAnalogY_M001],edx
-        mov     dword[InputPort_P0Input_vAnalogX_M101],esi
-        mov     dword[InputPort_P0Input_vAnalogY_M101],edi
-        mov     ecx,dword[Mouse_tMouse_vAnalogX_M011]
-        mov     edx,dword[Mouse_tMouse_vAnalogY_M011]
-        mov     esi,dword[Mouse_tMouse_vAnalogX_M111]
-        mov     edi,dword[Mouse_tMouse_vAnalogY_M111]
-        mov     dword[InputPort_P0Input_vAnalogX_M011],ecx
-        mov     dword[InputPort_P0Input_vAnalogY_M011],edx
-        mov     dword[InputPort_P0Input_vAnalogX_M111],esi
-        mov     dword[InputPort_P0Input_vAnalogY_M111],edi
-        ;jmp     .end
-
         .end:
         pop     edi
         pop     esi
@@ -7124,164 +7726,6 @@ loc_4ED420: ; InputPort_InputHandler
         pop     ebx
         add     esp,10h
         retn    0
-
-proc Input_Update c ptInputPort
-
-        .update_hp_devices: ; update high priority devices (mouse)
-        call    near PATCHER_CALL_TRAP ;Mouse_Update:0x0048FC20
-        .fixup1 = $-4
-
-        .write_mouse_buffered_buttons:
-        mov     eax,dword[PATCHER_ADDR_TRAP] ;Mouse_tMouse.bButton:0x00C28F8C
-        .fixup2 = $-4
-        or      dword[Mouse_bButtonAcc],eax
-
-        ;.update_phases:
-        ;ccall   Mouse_UpdatePhaseInputs
-
-        .end:
-        ret
-endp
-
-proc Input_UpdateOnRun c ptInputPort
-
-        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
-
-        .update_lp_devices: ; update low priority devices (keyboard, joypad)
-        call    near PATCHER_CALL_TRAP ;Keyboard_Update:0x00490230
-        .fixup1 = $-4
-        call    near PATCHER_CALL_TRAP ;Joypad_Update:0x00509CF0
-        .fixup2 = $-4
-
-        .read_mouse_buffered_buttons:
-        mov     eax,dword[Mouse_bButtonAcc]
-        mov     dword[PATCHER_ADDR_TRAP],eax ;Mouse_tMouse.bButton:0x00C28F8C
-        .fixup3 = $-4
-        mov     dword[Mouse_bButtonAcc],0
-
-        .update_phases:
-        ccall   Mouse_UpdatePhaseInputs
-
-        .update_inputport:
-        ccall   InputPort_Update,dword[ptInputPort]
-
-        .zero_playerinput:
-        mov     dword[HumanPlayerInput_IsRunning],FALSE
-
-        .update_sens_mult:
-        ccall   InputOptions_UpdateMouseSensitivity
-
-        .end:
-        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_NONE
-        ret
-endp
-
-proc Input_UpdateOnInterp c ptInputPort
-
-        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
-
-        .update_phases:
-        ccall   Mouse_UpdatePhaseInputs
-
-        .update_inputport:
-        ccall   InputPort_Update,dword[ptInputPort]
-
-        .end:
-        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_NONE
-        ret
-endp
-
-proc Input_UpdateOnDraw c ptInputPort
-
-        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_DRAW
-
-        .update_phases:
-        ccall   Mouse_UpdatePhaseInputs
-
-        .update_inputport:
-        ccall   InputPort_Update,dword[ptInputPort]
-
-        .end:
-        mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_NONE
-        ret
-endp
-
-proc InputOptions_UpdateMouseSensitivity c
-
-        push    ebx
-
-        .get_config_ptr:
-        call    near PATCHER_CALL_TRAP ;Config_GetActivePlayerProfile:0x00406220
-        .fixup1 = $-4
-        mov     ebx,eax
-
-        .clamp_sens:
-        ;mov     ecx,dword[ebx+53Ch] ;ptPlayerProfile->tInputOptions.vMouseSensitivity
-        ;fld     dword[ebx+53Ch] ;ptPlayerProfile->tInputOptions.vMouseSensitivity
-        .lerp_sens:
-        fld     dword[InputOptions_vMaxMouseSensMult]
-        fsub    dword[InputOptions_vMinMouseSensMult]
-        fmul    dword[ebx+53Ch] ;ptPlayerProfile->tInputOptions.vMouseSensitivity
-        fadd    dword[InputOptions_vMinMouseSensMult]
-        .get_value:
-        push    ecx
-        fst     dword[esp]
-        pop     ecx
-        .clamp_max:
-        mov     edx,dword[InputOptions_vMaxMouseSensMult]
-        fcom    dword[InputOptions_vMaxMouseSensMult]
-        fnstsw  ax
-        test    ah,41h
-        setne   al
-        and     eax,1
-        neg     eax
-        sub     ecx,edx
-        and     ecx,eax
-        add     ecx,edx
-        .clamp_min:
-        mov     edx,dword[InputOptions_vMinMouseSensMult]
-        fcomp   dword[InputOptions_vMinMouseSensMult]
-        fnstsw  ax
-        test    ah,5
-        setp    al
-        and     eax,1
-        neg     eax
-        sub     ecx,edx
-        and     ecx,eax
-        add     ecx,edx
-
-        .save_sensx:
-        mov     dword[InputOptions_vCurMouseSensX],ecx
-
-        .save_sensy_ign_inv:
-        mov     edx,ecx
-        xor     edx,0x80000000 ; sign bit
-        mov     dword[InputOptions_vCurMouseSensYIgn],edx
-
-        .save_sensy:
-        mov     eax,0x80000000 ; sign bit
-        mov     edx,dword[ebx+538h] ;ptPlayerProfile->tInputOptions.isInvertMouse
-        neg     edx
-        sbb     edx,edx
-        and     eax,edx
-        xor     ecx,eax
-        mov     dword[InputOptions_vCurMouseSensY],ecx
-
-        .apply_custom_mult:
-        fld     dword[InputOptions_vCurMouseSensX]
-        fmul    dword[Mouse_vCustomSensMultX]
-        fstp    dword[InputOptions_vCurMouseSensX]
-        fld     dword[InputOptions_vCurMouseSensY]
-        fmul    dword[Mouse_vCustomSensMultY]
-        fstp    dword[InputOptions_vCurMouseSensY]
-        fld     dword[InputOptions_vCurMouseSensYIgn]
-        fmul    dword[Mouse_vCustomSensMultY]
-        fstp    dword[InputOptions_vCurMouseSensYIgn]
-
-        .end:
-        pop     ebx
-        ret
-endp
 
 proc HumanPlayer_GetMouseDeltaXForPhase c bPhaseMask
 
@@ -7292,7 +7736,7 @@ proc HumanPlayer_GetMouseDeltaXForPhase c bPhaseMask
         jae     .zero
 
         .get_delta:
-        mov     eax,dword[Mouse_tMouse_apvAnalogX_Tbl+eax*4]
+        mov     eax,dword[Mouse_apvAnalogX_Tbl+eax*4]
         fld     dword[eax]
         fmul    dword[InputOptions_vCurMouseSensX]
         ret
@@ -7311,7 +7755,7 @@ proc HumanPlayer_GetMouseDeltaYForPhase c bPhaseMask
         jae     .zero
 
         .get_delta:
-        mov     eax,dword[Mouse_tMouse_apvAnalogY_Tbl+eax*4]
+        mov     eax,dword[Mouse_apvAnalogY_Tbl+eax*4]
         fld     dword[eax]
         fmul    dword[InputOptions_vCurMouseSensY]
         ret
@@ -7330,7 +7774,7 @@ proc HumanPlayer_GetMouseDeltaYForPhaseNoInv c bPhaseMask ; ignore invert mouse 
         jae     .zero
 
         .get_delta:
-        mov     eax,dword[Mouse_tMouse_apvAnalogY_Tbl+eax*4]
+        mov     eax,dword[Mouse_apvAnalogY_Tbl+eax*4]
         fld     dword[eax]
         fmul    dword[InputOptions_vCurMouseSensYIgn]
         ret
@@ -7346,40 +7790,40 @@ proc HumanPlayerInput_GetChannel0 c ptHumanPlayer
         cmp     dword[HumanPlayerInput_IsRunning],FALSE
         je      .zero
         mov     eax,dword[ptHumanPlayer]
-        cmp     byte[eax+250h],0 ;ptHumanPlayer->isLockChannel
+        cmp     byte[eax+250h],FALSE ;ptHumanPlayer->isLockChannel
         jne     .zero
 
-        .check_interp_disabled:
+        .check_interp:
         ccall   Flow_IsInterpSuppressed
         test    eax,eax
-        jnz     .check_phase_locked
+        jnz     .check_phase_interp_off
 
-        .check_phase_unlocked:
+        .check_phase_interp_on:
         mov     eax,dword[Flow_nCurrentPhase]
         cmp     eax,NFL_FLOW_PHASE_RUN
-        je      .get_analogx_p1_unlocked
+        je      .get_analogx_p1_interp_on
         cmp     eax,NFL_FLOW_PHASE_INTERP
-        je      .get_analogx_p2_unlocked
+        je      .get_analogx_p2_interp_on
         fldz
         ret
 
-        .get_analogx_p1_unlocked:
+        .get_analogx_p1_interp_on:
         mov     eax,dword[ptHumanPlayer]
         fld     dword[eax+1B0h] ;ptHumanPlayer->avChannel[0]
         fsub    dword[HumanPlayerInput_vChannel0]
         ret
 
-        .get_analogx_p2_unlocked:
+        .get_analogx_p2_interp_on:
         ccall   HumanPlayer_GetMouseDeltaXForPhase,NFL_FLOW_PHASE_MASK_INTERP
         ret
 
-        .check_phase_locked:
+        .check_phase_interp_off:
         cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
-        je      .get_analogx_p1_locked
+        je      .get_analogx_p1_interp_off
         fldz
         ret
 
-        .get_analogx_p1_locked:
+        .get_analogx_p1_interp_off:
         mov     eax,dword[ptHumanPlayer]
         fld     dword[eax+1B0h] ;ptHumanPlayer->avChannel[0]
         ret
@@ -7395,40 +7839,40 @@ proc HumanPlayerInput_GetChannel1 c ptHumanPlayer
         cmp     dword[HumanPlayerInput_IsRunning],FALSE
         je      .zero
         mov     eax,dword[ptHumanPlayer]
-        cmp     byte[eax+250h],0 ;ptHumanPlayer->isLockChannel
+        cmp     byte[eax+250h],FALSE ;ptHumanPlayer->isLockChannel
         jne     .zero
 
-        .check_interp_disabled:
+        .check_interp:
         ccall   Flow_IsInterpSuppressed
         test    eax,eax
-        jnz     .check_phase_locked
+        jnz     .check_phase_interp_off
 
-        .check_phase_unlocked:
+        .check_phase_interp_on:
         mov     eax,dword[Flow_nCurrentPhase]
         cmp     eax,NFL_FLOW_PHASE_RUN
-        je      .get_analogy_p1_unlocked
+        je      .get_analogy_p1_interp_on
         cmp     eax,NFL_FLOW_PHASE_INTERP
-        je      .get_analogy_p2_unlocked
+        je      .get_analogy_p2_interp_on
         fldz
         ret
 
-        .get_analogy_p1_unlocked:
+        .get_analogy_p1_interp_on:
         mov     eax,dword[ptHumanPlayer]
         fld     dword[eax+1B4h] ;ptHumanPlayer->avChannel[1]
         fsub    dword[HumanPlayerInput_vChannel1]
         ret
 
-        .get_analogy_p2_unlocked:
+        .get_analogy_p2_interp_on:
         ccall   HumanPlayer_GetMouseDeltaYForPhase,NFL_FLOW_PHASE_MASK_INTERP
         ret
 
-        .check_phase_locked:
+        .check_phase_interp_off:
         cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
-        je      .get_analogy_p1_locked
+        je      .get_analogy_p1_interp_off
         fldz
         ret
 
-        .get_analogy_p1_locked:
+        .get_analogy_p1_interp_off:
         mov     eax,dword[ptHumanPlayer]
         fld     dword[eax+1B4h] ;ptHumanPlayer->avChannel[1]
         ret
@@ -7542,3 +7986,149 @@ loc_464826: ; HumanView_UpdateView
         fstp    dword[esp+10h+.a2]
         jmp     near PATCHER_JUMP_TRAP ;loc_46484D
         .fixup3 = $-4
+
+loc_483455: ; HumanCamera_MovementControlInput
+
+        .check_interp:
+        ccall   Flow_IsInterpSuppressed
+        test    eax,eax
+        jnz     .check_phase_interp_off
+
+        .check_phase_interp_on:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+        jne     .zero_analogy_p2
+
+        .get_analogy_p2:
+        ccall   HumanPlayer_GetMouseDeltaYForPhase,NFL_FLOW_PHASE_MASK_INTERP
+        jmp     .back
+
+        .zero_analogy_p2:
+        fldz
+        jmp     .back
+
+        .check_phase_interp_off:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
+        jne     .zero_analogy_p1
+
+        .get_analogy_p1:
+        ccall   HumanPlayer_GetMouseDeltaYForPhase,NFL_FLOW_PHASE_MASK_RUN
+        jmp     .back
+
+        .zero_analogy_p1:
+        fldz
+        ;jmp     .back
+
+        .back:
+        fadd    st0,st0 ; x2 sensitivity seems to match 1st person sensitivity
+        jmp     near PATCHER_JUMP_TRAP ;loc_48346D
+        .fixup1 = $-4
+
+loc_4834AB: ; HumanCamera_MovementControlInput
+
+        .check_interp:
+        ccall   Flow_IsInterpSuppressed
+        test    eax,eax
+        jnz     .check_phase_interp_off
+
+        .check_phase_interp_on:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+        jne     .zero_analogx_p2
+
+        .get_analogx_p2:
+        ccall   HumanPlayer_GetMouseDeltaXForPhase,NFL_FLOW_PHASE_MASK_INTERP
+        jmp     .back
+
+        .zero_analogx_p2:
+        fldz
+        jmp     .back
+
+        .check_phase_interp_off:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
+        jne     .zero_analogx_p1
+
+        .get_analogx_p1:
+        ccall   HumanPlayer_GetMouseDeltaXForPhase,NFL_FLOW_PHASE_MASK_RUN
+        jmp     .back
+
+        .zero_analogx_p1:
+        fldz
+        ;jmp     .back
+
+        .back:
+        fadd    st0,st0 ; x2 sensitivity seems to match 1st person sensitivity
+        fchs ; direction is inverted for some reason
+        jmp     near PATCHER_JUMP_TRAP ;loc_4834B7
+        .fixup1 = $-4
+
+loc_483E57: ; HumanCamera_MovementControlInput
+
+        .check_interp:
+        ccall   Flow_IsInterpSuppressed
+        test    eax,eax
+        jnz     .check_phase_interp_off
+
+        .check_phase_interp_on:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+        jne     .zero_analogx_p2
+
+        .get_analogx_p2:
+        ccall   HumanPlayer_GetMouseDeltaXForPhase,NFL_FLOW_PHASE_MASK_INTERP
+        jmp     .back
+
+        .zero_analogx_p2:
+        fldz
+        jmp     .back
+
+        .check_phase_interp_off:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
+        jne     .zero_analogx_p1
+
+        .get_analogx_p1:
+        ccall   HumanPlayer_GetMouseDeltaXForPhase,NFL_FLOW_PHASE_MASK_RUN
+        jmp     .back
+
+        .zero_analogx_p1:
+        fldz
+        ;jmp     .back
+
+        .back:
+        fadd    st0,st0 ; x2 sensitivity seems to match 1st person sensitivity
+        fchs ; direction is inverted for some reason
+        jmp     near PATCHER_JUMP_TRAP ;loc_483E63
+        .fixup1 = $-4
+
+loc_483E67: ; HumanCamera_DeathCameraControlInput
+
+        .check_interp:
+        ccall   Flow_IsInterpSuppressed
+        test    eax,eax
+        jnz     .check_phase_interp_off
+
+        .check_phase_interp_on:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+        jne     .zero_analogy_p2
+
+        .get_analogy_p2:
+        ccall   HumanPlayer_GetMouseDeltaYForPhase,NFL_FLOW_PHASE_MASK_INTERP
+        jmp     .back
+
+        .zero_analogy_p2:
+        fldz
+        jmp     .back
+
+        .check_phase_interp_off:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
+        jne     .zero_analogy_p1
+
+        .get_analogy_p1:
+        ccall   HumanPlayer_GetMouseDeltaYForPhase,NFL_FLOW_PHASE_MASK_RUN
+        jmp     .back
+
+        .zero_analogy_p1:
+        fldz
+        ;jmp     .back
+
+        .back:
+        fadd    st0,st0 ; x2 sensitivity seems to match 1st person sensitivity
+        jmp     near PATCHER_JUMP_TRAP ;loc_483E73
+        .fixup1 = $-4

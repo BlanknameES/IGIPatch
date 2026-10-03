@@ -16,7 +16,7 @@ include '.\basedll\rsrc.inc'
 
 ;------------------------------------------------------------
 
-format PE GUI 4.0 DLL at 0x00400000 as 'dll'
+format PE GUI 4.0 NX DLL at 0x00400000 as 'dll'
 entry DllEntryPoint 
 
 section '.code' code readable executable

@@ -61,3 +61,29 @@ proc AnimController_SetTPFValue c vTPF
         .end:
         ret
 endp
+
+DebugText_printf_NEW: ; identical to the original
+
+        .zFormat = 4
+        .pArgList = 8
+
+        .check_enabled:
+        mov     al,byte[PATCHER_ADDR_TRAP] ;DebugText_isEnabled:0x00A5EA75
+        .fixup1 = $-4
+        test    al,al
+        jz      .end
+
+        .print:
+        mov     ecx,dword[esp+.zFormat]
+        mov     edx,dword[PATCHER_ADDR_TRAP] ;DebugText_ptWindow:0x00A5EBD0
+        .fixup2 = $-4
+        lea     eax,[esp+.pArgList]
+        push    eax
+        push    ecx
+        push    edx
+        call    near PATCHER_CALL_TRAP ;TextWindow_vprintf:0x004E76E0
+        .fixup3 = $-4
+        add     esp,3*4
+
+        .end:
+        retn    0

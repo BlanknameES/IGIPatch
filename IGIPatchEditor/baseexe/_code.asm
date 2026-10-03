@@ -26,9 +26,9 @@ endp
 proc WinMain hInstance,hPrevInstance,lpCmdLine,nCmdShow ; TODO: multi-monitor, dpi scaling
 
         locals
-                hWindow rd 1
-                hMenu rd 1
-                hAccel rd 1
+                hWindow dd ?
+                hMenu dd ?
+                hAccel dd ?
                 nExitCode dd 0
         endl
 
@@ -103,45 +103,46 @@ endp
 
 proc App_InitRunTimeDynamicLinking
 
-        locals
-                DLL_User32 du 'User32.dll',0
-                PROC_ChangeWindowMessageFilter db 'ChangeWindowMessageFilter',0
-                PROC_ChangeWindowMessageFilterEx db 'ChangeWindowMessageFilterEx',0
-                DLL_UxTheme du 'UxTheme.dll',0
-                PROC_SetWindowTheme db 'SetWindowTheme',0
-                DLL_Shell32 du 'Shell32.dll',0
-                PROC_ShellExecuteW db 'ShellExecuteW',0
-        endl
-
         push    ebx
 
-        ; User32.dll
-        lea     eax,[DLL_User32]
-        stdcall GetOrLoadLibrary,eax,User32DLL
+        .user32_dll: ; User32.dll
+        mov     eax,DLL_User32
+        ;stdcall GetOrLoadLibrary,eax,User32DLL
+        invoke  GetModuleHandleW,eax
+        mov     dword[User32DLL],eax
+        test    eax,eax
+        jz      .uxtheme_dll
         mov     ebx,eax
-        lea     eax,[PROC_ChangeWindowMessageFilter]
+        mov     eax,PROC_ChangeWindowMessageFilter
         stdcall GetFuncAddress,ebx,eax
         mov     dword[ChangeWindowMessageFilter],eax
-        lea     eax,[PROC_ChangeWindowMessageFilterEx]
+        mov     eax,PROC_ChangeWindowMessageFilterEx
         stdcall GetFuncAddress,ebx,eax
         mov     dword[ChangeWindowMessageFilterEx],eax
 
-        ; Uxtheme.dll
-        lea     eax,[DLL_UxTheme]
-        stdcall GetOrLoadLibrary,eax,UxThemeDLL
+        .uxtheme_dll: ; Uxtheme.dll
+        mov     eax,DLL_UxTheme
+        ;stdcall GetOrLoadLibrary,eax,UxThemeDLL
+        invoke  LoadLibraryW,eax
+        mov     dword[UxThemeDLL],eax
+        test    eax,eax
+        jz      .shell32_dll
         mov     ebx,eax
-        lea     eax,[PROC_SetWindowTheme]
+        mov     eax,PROC_SetWindowTheme
         stdcall GetFuncAddress,ebx,eax
         mov     dword[SetWindowTheme],eax
 
-        ; Shell32.dll
-        lea     eax,[DLL_Shell32]
-        stdcall GetOrLoadLibrary,eax,Shell32DLL
+        .shell32_dll: ; Shell32.dll
+        mov     eax,DLL_Shell32
+        ;stdcall GetOrLoadLibrary,eax,Shell32DLL
+        invoke  GetModuleHandleW,eax
+        mov     dword[Shell32DLL],eax
+        test    eax,eax
+        jz      .end
         mov     ebx,eax
-        lea     eax,[PROC_ShellExecuteW]
+        mov     eax,PROC_ShellExecuteW
         stdcall GetFuncAddress,ebx,eax
         mov     dword[_ShellExecuteW],eax
-
 
         .end:
         pop     ebx

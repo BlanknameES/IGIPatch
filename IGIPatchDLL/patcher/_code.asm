@@ -1,5 +1,7 @@
 proc StartPatch
 
+        push    ebx
+
         ; get process handle
         invoke  GetModuleHandle,NULL
         mov     dword[hThisExe],eax
@@ -27,24 +29,32 @@ proc StartPatch
 
         ; apply patches
         stdcall Patcher_ApplyPatches,dword[Patcher_uiCurVersionID],dword[Patcher_pCurPMIHandle]
+        mov     ebx,eax
 
         ; show patching result
         stdcall Patcher_DMessageBoxByResult,NULL,eax,wszPDPatchingSuccess,wszPDCapInfo,wszPDPatchingFailure,wszPDCapError
+
+        .check_result:
+        test    ebx,ebx
+        jz      .end
 
         ; load plugins
         stdcall Patcher_LoadPlugins
 
         ; show plugins result
         ;stdcall Patcher_DMessageBoxByResult,NULL,eax,wszPDPluginsLoaded,wszPDCapInfo,wszPDPluginsFailed,wszPDCapError
+
+        .end:
+        pop     ebx
         ret
 
         .msg_patch_disabled:
         stdcall Patcher_DMessageBox,NULL,wszPDPatchDisabled,wszPDCapWarn,MB_OK+MB_ICONWARNING
-        ret
+        jmp     .end
 
         .msg_unknown_version:
         stdcall Patcher_DMessageBox,NULL,wszPDUnknownVersion,wszPDCapError,MB_OK+MB_ICONERROR
-        ret
+        jmp     .end
 endp
 
 proc Patcher_FindMatchingVersionID pBuildArray

@@ -101,13 +101,19 @@ Flow_nSuspendTime               dq 0
 Flow_nRefreshRate               dd -1
 
 ; Flow_RunHandler static vars
-Flow_nCurrentPhase              dd 0
+Flow_nCurFPSLimiterMode         dd NFL_FLOW_FPSLM_NORMAL
+Flow_nCurFPSLimiterRenderMode   dd NFL_FLOW_FPSLRM_NOT_SET
+Flow_nCurrentPhase              dd NFL_FLOW_PHASE_NONE
 Flow_nCurrentInputRate          dd 0
 Flow_nCurrentFrequency          dd 0
 Flow_nCurrentRefreshRate        dd 0
-Flow_vCurrentGLogicFPS          dd 0.0
-Flow_vCurrentRenderFPS          dd 0.0
+Flow_vCurrentGLogicFPS          dq 0.0
+Flow_vCurrentRenderFPS          dq 0.0
+;Flow_vCInputTimestep            dq 0.0
 Flow_nCInputTimestep            dq 0
+;Flow_nCInputTimestepAdd         dd 0
+;Flow_vCInputTimestepAcc         dq 0.0
+;Flow_vCInputTimestepAccAdd      dd 0.0
 ;Flow_vGLogicTimestep            dq 0.0
 Flow_nGLogicTimestep            dq 0
 Flow_nGLogicTimestepAdd         dd 0
@@ -118,7 +124,9 @@ Flow_nRenderTimestep            dq 0
 Flow_nRenderTimestepAdd         dd 0
 Flow_vRenderTimestepAcc         dq 0.0
 Flow_vRenderTimestepAccAdd      dd 0.0
+;Flow_nCInputUpdateTime          dq 0
 Flow_nCInputLastTime            dq 0
+;Flow_nCInputDeltaTime           dq 0
 Flow_nGLogicUpdateTime          dq 0
 Flow_nGLogicLastTime            dq 0
 Flow_nGLogicDeltaTime           dq 0
@@ -127,6 +135,16 @@ Flow_nRenderLastTime            dq 0
 Flow_nRenderDeltaTime           dq 0
 Flow_vDrawDeltaTime             dq 0.0
 Flow_isForbidDrawOneTick        dd FALSE
+Flow_isRenderTimerUsed          dd TRUE
+Flow_IsRenderFasterThanGLogic   dd FALSE
+
+; fps counter
+Flow_nFPSCounterStartTicks      dd 0
+Flow_nFPSCounterStartFrames     dd 0
+Flow_nFPSCounterInterval        dq 0
+Flow_nFPSCounterElapsed         dq 0
+Flow_vAverageGLogicFPS          dq 0.0
+Flow_vAverageRenderFPS          dq 0.0
 
 ; temp workaround
 StationaryGun_isUsedByPlayer    dd FALSE
@@ -145,34 +163,36 @@ Direct3DRender_tDrawRigidMeshContext2 DrawRigidMeshContext2_t FALSE,0,<0.0,0.0,0
 Direct3DRender_tDrawBoneMeshContext2 DrawBoneMeshContext_t FALSE,0,<0.0,0.0,0.0>
 ;Direct3DRender_tDrawSplineMeshContext2 DrawSplineMeshContext2_t FALSE,0,<0.0,0.0,0.0>
 
+; mouse static vars
+Mouse_IsLocked                  db FALSE
+align 4
 Mouse_nRelPositionX             dd 0
 Mouse_nRelPositionY             dd 0
 Mouse_vCustomSensMultX          dd 1.0
 Mouse_vCustomSensMultY          dd 1.0
 Mouse_bButtonAcc                dd 0 ; buffered buttons swap
 
-; TODO: rename to simply Mouse_
-Mouse_tMouse_IsLocked           db FALSE
-align 4
-Mouse_tMouse_vAnalogX           dd 0.0
-Mouse_tMouse_vAnalogY           dd 0.0
-Mouse_tMouse_vAnalogX_M100      dd 0.0 ; NFL_FLOW_PHASE_MASK_RUN
-Mouse_tMouse_vAnalogY_M100      dd 0.0
-Mouse_tMouse_vAnalogX_M010      dd 0.0 ; NFL_FLOW_PHASE_MASK_INTERP
-Mouse_tMouse_vAnalogY_M010      dd 0.0
-Mouse_tMouse_vAnalogX_M110      dd 0.0 ; NFL_FLOW_PHASE_MASK_RUN + NFL_FLOW_PHASE_MASK_INTERP
-Mouse_tMouse_vAnalogY_M110      dd 0.0
-Mouse_tMouse_vAnalogX_M001      dd 0.0 ; NFL_FLOW_PHASE_MASK_DRAW
-Mouse_tMouse_vAnalogY_M001      dd 0.0
-Mouse_tMouse_vAnalogX_M101      dd 0.0 ; NFL_FLOW_PHASE_MASK_RUN + NFL_FLOW_PHASE_MASK_DRAW
-Mouse_tMouse_vAnalogY_M101      dd 0.0
-Mouse_tMouse_vAnalogX_M011      dd 0.0 ; NFL_FLOW_PHASE_MASK_INTERP + NFL_FLOW_PHASE_MASK_DRAW
-Mouse_tMouse_vAnalogY_M011      dd 0.0
-Mouse_tMouse_vAnalogX_M111      dd 0.0 ; NFL_FLOW_PHASE_MASK_RUN + NFL_FLOW_PHASE_MASK_INTERP + NFL_FLOW_PHASE_MASK_DRAW
-Mouse_tMouse_vAnalogY_M111      dd 0.0
-Mouse_tMouse_avAnalogX_Acc      dd 7 dup (0.0)
-Mouse_tMouse_avAnalogY_Acc      dd 7 dup (0.0)
+; per-phase analog values
+Mouse_vAnalogX                  dd 0.0
+Mouse_vAnalogY                  dd 0.0
+Mouse_vAnalogX_M100             dd 0.0 ; NFL_FLOW_PHASE_MASK_RUN
+Mouse_vAnalogY_M100             dd 0.0
+Mouse_vAnalogX_M010             dd 0.0 ; NFL_FLOW_PHASE_MASK_INTERP
+Mouse_vAnalogY_M010             dd 0.0
+Mouse_vAnalogX_M110             dd 0.0 ; NFL_FLOW_PHASE_MASK_RUN + NFL_FLOW_PHASE_MASK_INTERP
+Mouse_vAnalogY_M110             dd 0.0
+Mouse_vAnalogX_M001             dd 0.0 ; NFL_FLOW_PHASE_MASK_DRAW
+Mouse_vAnalogY_M001             dd 0.0
+Mouse_vAnalogX_M101             dd 0.0 ; NFL_FLOW_PHASE_MASK_RUN + NFL_FLOW_PHASE_MASK_DRAW
+Mouse_vAnalogY_M101             dd 0.0
+Mouse_vAnalogX_M011             dd 0.0 ; NFL_FLOW_PHASE_MASK_INTERP + NFL_FLOW_PHASE_MASK_DRAW
+Mouse_vAnalogY_M011             dd 0.0
+Mouse_vAnalogX_M111             dd 0.0 ; NFL_FLOW_PHASE_MASK_RUN + NFL_FLOW_PHASE_MASK_INTERP + NFL_FLOW_PHASE_MASK_DRAW
+Mouse_vAnalogY_M111             dd 0.0
+Mouse_avAnalogX_Acc             dd 7 dup (0.0)
+Mouse_avAnalogY_Acc             dd 7 dup (0.0)
 
+; per-phase analog values for InputPort_atInputPort[0]
 InputPort_P0Input_vAnalogX_M100 dd 0.0
 InputPort_P0Input_vAnalogY_M100 dd 0.0
 InputPort_P0Input_vAnalogX_M010 dd 0.0
@@ -188,12 +208,14 @@ InputPort_P0Input_vAnalogY_M011 dd 0.0
 InputPort_P0Input_vAnalogX_M111 dd 0.0
 InputPort_P0Input_vAnalogY_M111 dd 0.0
 
+; HumanPlayerInput static vars
 HumanPlayerInput_IsRunning      dd FALSE
 HumanPlayerInput_vChannel0      dd 0.0
 HumanPlayerInput_vChannel1      dd 0.0
 ;HumanPlayerInput_vLastChannel0  dd 0.0 ; TODO
 ;HumanPlayerInput_vLastChannel1  dd 0.0 ; TODO
 
+; mouse sensitivity calc values
 InputOptions_vCurMouseSensX     dd 0.4
 InputOptions_vCurMouseSensY     dd 0.4
 InputOptions_vCurMouseSensYIgn  dd 0.4 ; InputOptions_vCurMouseSensY with invert mouse option ignored

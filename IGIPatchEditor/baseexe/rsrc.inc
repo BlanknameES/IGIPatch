@@ -19,7 +19,7 @@ ProductName equ ProjectName
 ProductVersion equ ProjectVersion
 ;LegalCopyright equ 'No rights reserved.'
 LegalCopyright equ '© 2026 BlanknameES. All rights reserved.'
-OriginalFileName equ ProjectName,'.exe'
+OriginalFileName equ FileBaseName,'.exe'
 
 ;------------------------------------------------------------
 ; win32 constants

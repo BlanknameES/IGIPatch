@@ -1,4 +1,18 @@
 ;------------------------------------------------------------
+; APIs
+;------------------------------------------------------------
+
+DLL_User32                          du 'User32.dll',0
+PROC_ChangeWindowMessageFilter      db 'ChangeWindowMessageFilter',0
+PROC_ChangeWindowMessageFilterEx    db 'ChangeWindowMessageFilterEx',0
+
+DLL_UxTheme                         du 'UxTheme.dll',0
+PROC_SetWindowTheme                 db 'SetWindowTheme',0
+
+DLL_Shell32                         du 'Shell32.dll',0
+PROC_ShellExecuteW                  db 'ShellExecuteW',0
+
+;------------------------------------------------------------
 ; menu strings
 ;------------------------------------------------------------
 
@@ -55,11 +69,11 @@ ctrl_pat_laaflag_st     du 'LAA Flag: ',0
 ctrl_pat_laaflag_eb     du '',0
 ctrl_pat_laaflag_cb     du 'Enable LAA flag (4GB patch)',0
 
-
 OFN_szFileFilter        du 'Windows Executable (*.exe)',0,'*.exe',0,\
                            'IGI executable (IGI.exe)',0,'IGI.exe',0,\
                            'All Files (*.*)',0,'*.*',0,\
                            0
+
 OFN_szTitle             du 'Please select IGI.exe',0
 OFN_szDefExt            du 'exe',0
 
@@ -67,6 +81,7 @@ OFN_szDefExt            du 'exe',0
 ; control states
 ;------------------------------------------------------------
 
+align 4 ; TODO: figure out why text becomes invisible without this line
 App_szCtrlNoFile        du 'Select a file to patch',0
 App_szCtrlEmpty         du '',0
 App_szCtrlNA            du 'N/A',0

@@ -19,7 +19,7 @@ ProductName equ ProjectName
 ProductVersion equ ProjectVersion
 ;LegalCopyright equ 'No rights reserved.'
 LegalCopyright equ '© 2026 BlanknameES. All rights reserved.'
-OriginalFileName equ ProjectName,'.dll'
+OriginalFileName equ FileBaseName,'.dll'
 
 ;------------------------------------------------------------
 ; win32 control IDs
