@@ -39,6 +39,11 @@ struct INIFILE_SEC_WSP
         ViewportFOVPercent              dd ?
 ends
 
+struct INIFILE_SEC_DFP
+
+        AllowMultiInstance              dd ?
+ends
+
 struct INIFILE_SEC_MMP
 
         MainMenuScreenWidth             dd ?
@@ -70,6 +75,7 @@ struct INIFILE
         Modules                         INIFILE_SEC_MODULES
         BLP                             INIFILE_SEC_BLP
         WSP                             INIFILE_SEC_WSP
+        DFP                             INIFILE_SEC_DFP
         MMP                             INIFILE_SEC_MMP
         NFL                             INIFILE_SEC_NFL
 ends

@@ -143,12 +143,6 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         mov     esi,dword[uiRelocValue1]
         mov     edi,dword[uiRelocValue2]
 
-        ; skip mutex check
-        ;stdcall Patcher_WriteWordReloc,0x0048F554,esi,0xE990
-        ;and     ebx,eax
-        ;stdcall Patcher_WriteAddressReloc,0x0048F554+2,esi,0x0048F578,esi,TRUE
-        ;and     ebx,eax
-
         ;------------------------------------------------------------
         ; DPIAwarenessPatch - high priority
         ;------------------------------------------------------------
@@ -686,6 +680,14 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteByteReloc,0x00415054+6,esi,0
         and     ebx,eax
 
+        ; WinMain - allow multiinstance
+        stdcall Patcher_WriteHookReloc,0x0048F53F,esi,loc_48F53F,edi,0x0048F544-0x0048F53F
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_48F53F.fixup1,edi,0x0048F578,esi,TRUE
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_48F53F.fixup2,edi,0x0048F544,esi,TRUE
+        and     ebx,eax
+
         ;------------------------------------------------------------
         ; MainMenuPatch
         ;------------------------------------------------------------
@@ -931,6 +933,10 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,loc_402260.fixup1,edi,0x0040262E,esi,TRUE
         and     ebx,eax
 
+        ; Flow_CalcAnimsSpeed - calculate anims speed multiplier to scale with interpolation
+        stdcall Patcher_WriteAddressReloc,Flow_CalcAnimsSpeed.fixup1,edi,0x00567C8C,esi,FALSE ;Flow_ptFlow
+        and     ebx,eax
+
         ; Flow_UpdateFPSCounter - draw fps counters
         stdcall Patcher_WriteAddressReloc,Flow_UpdateFPSCounter.fixup1,edi,0x00567C8C,esi,FALSE ;Flow_ptFlow
         and     ebx,eax
@@ -1143,14 +1149,16 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteAddressReloc,loc_465251.fixup3,edi,0x00465257,esi,TRUE
         and     ebx,eax
 
-        ; HumanView_UpdateBody - skip updating animcontroller during interpolation
-        stdcall Patcher_WriteHookReloc,0x0046553F,esi,loc_46553F,edi,0x00465545-0x0046553F
+        ; HumanView_UpdateBody - update animcontroller with the right speed during interpolation
+        stdcall Patcher_WriteHookReloc,0x0046553F,esi,loc_46553F,edi,0x0046555F-0x0046553F
         and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,loc_46553F.fixup1,edi,0x0046560D,esi,TRUE
+        stdcall Patcher_WriteAddressReloc,loc_46553F.fixup1,edi,0x005385B0,esi,FALSE ;HumanPlayer_eQTaskType
         and     ebx,eax
-        stdcall Patcher_WriteAddressReloc,loc_46553F.fixup2,edi,0x00465545,esi,TRUE
+        stdcall Patcher_WriteAddressReloc,loc_46553F.fixup2,edi,0x004D3210,esi,TRUE ;AnimController_Step
         and     ebx,eax
-        stdcall Patcher_WriteByteReloc,0x0046555C+2,esi,2*4 ; fix adjusted esp value
+        stdcall Patcher_WriteAddressReloc,loc_46553F.fixup3,edi,0x0046555F,esi,TRUE
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_46553F.fixup4,edi,0x0046560D,esi,TRUE
         and     ebx,eax
 
         ; HumanView_UpdateView - skip updating debug zoom level during interpolation
@@ -1455,6 +1463,12 @@ proc Patcher_ApplyRegularPatches_ID0 uiRelocValue1,uiRelocValue2
         stdcall Patcher_WriteHookReloc,0x004E0C8A,esi,loc_4E0C8A,edi,0x004E0C8F-0x004E0C8A
         and     ebx,eax
         stdcall Patcher_WriteAddressReloc,loc_4E0C8A.fixup1,edi,0x004E0C8F,esi,TRUE
+        and     ebx,eax
+
+        ; sub_4D4B60 - interpolate anims
+        stdcall Patcher_WriteHookReloc,0x004D4B95,esi,loc_4D4B95,edi,0x004D4B9B-0x004D4B95
+        and     ebx,eax
+        stdcall Patcher_WriteAddressReloc,loc_4D4B95.fixup1,edi,0x004D4B9B,esi,TRUE
         and     ebx,eax
 
         ; Flow_UpdateCInput - new function to handle short interval input updates

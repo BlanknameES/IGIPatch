@@ -53,6 +53,9 @@ proc IniFile_InitSettings pIniFile
         mov     dword[ebx+INIFILE.WSP.ViewportScalingMode],0
         mov     dword[ebx+INIFILE.WSP.ViewportFOVPercent],100
 
+        ; settings (DebugFeaturesPatch)
+        mov     dword[ebx+INIFILE.DFP.AllowMultiInstance],FALSE
+
         ; settings (MainMenuPatch)
         mov     dword[ebx+INIFILE.MMP.MainMenuScreenWidth],-1
         mov     dword[ebx+INIFILE.MMP.MainMenuScreenHeight],-1
@@ -105,6 +108,9 @@ proc IniFile_ReadSettings pIniFile
         ; settings (WidescreenPatch)
         stdcall IniFile_ReadIntSetting,ebx,ini_key_widescreen,ini_key_wsp_vp_scaling,INIFILE.WSP.ViewportScalingMode
         stdcall IniFile_ReadIntSetting,ebx,ini_key_widescreen,ini_key_wsp_vp_fov_per,INIFILE.WSP.ViewportFOVPercent
+
+        ; settings (DebugFeaturesPatch)
+        stdcall IniFile_ReadIntSetting,ebx,ini_key_debugfeatures,ini_key_dfp_multiinst,INIFILE.DFP.AllowMultiInstance
 
         ; settings (MainMenuPatch)
         stdcall IniFile_ReadIntSetting,ebx,ini_key_mainmenu,ini_key_mmp_width,INIFILE.MMP.MainMenuScreenWidth
@@ -188,6 +194,10 @@ proc IniFile_VerifySettings pIniFile
         ; float fov_default_rad = 60.0f * (3.14159265f / 180.0f) * 0.5f; // Default 60° half-angle in radians
         ; float fov_custom_rad  = (60.0f * (fov_percent / 100.0f)) * (3.14159265f / 180.0f) * 0.5f;
         ; float Viewport_vFOVTanMul = tanf(fov_custom_rad) / tanf(fov_default_rad);
+
+        ; settings (BorderlessPatch)
+        .blp_set_multiinst:
+        stdcall IniFile_BooleanizeSetting,ebx,INIFILE.DFP.AllowMultiInstance
 
         ; settings (MainMenuPatch)
         .mmp_get_mode:

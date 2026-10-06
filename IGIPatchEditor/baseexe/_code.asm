@@ -106,43 +106,20 @@ proc App_InitRunTimeDynamicLinking
         push    ebx
 
         .user32_dll: ; User32.dll
-        mov     eax,DLL_User32
-        ;stdcall GetOrLoadLibrary,eax,User32DLL
-        invoke  GetModuleHandleW,eax
-        mov     dword[User32DLL],eax
-        test    eax,eax
-        jz      .uxtheme_dll
+        stdcall GetOrLoadLibrary,DLL_User32,User32DLL
         mov     ebx,eax
-        mov     eax,PROC_ChangeWindowMessageFilter
-        stdcall GetFuncAddress,ebx,eax
-        mov     dword[ChangeWindowMessageFilter],eax
-        mov     eax,PROC_ChangeWindowMessageFilterEx
-        stdcall GetFuncAddress,ebx,eax
-        mov     dword[ChangeWindowMessageFilterEx],eax
+        stdcall GetFuncAddress,ebx,PROC_ChangeWindowMessageFilter,ChangeWindowMessageFilter
+        stdcall GetFuncAddress,ebx,PROC_ChangeWindowMessageFilterEx,ChangeWindowMessageFilterEx
 
         .uxtheme_dll: ; Uxtheme.dll
-        mov     eax,DLL_UxTheme
-        ;stdcall GetOrLoadLibrary,eax,UxThemeDLL
-        invoke  LoadLibraryW,eax
-        mov     dword[UxThemeDLL],eax
-        test    eax,eax
-        jz      .shell32_dll
+        stdcall GetOrLoadLibrary,DLL_UxTheme,UxThemeDLL
         mov     ebx,eax
-        mov     eax,PROC_SetWindowTheme
-        stdcall GetFuncAddress,ebx,eax
-        mov     dword[SetWindowTheme],eax
+        stdcall GetFuncAddress,ebx,PROC_SetWindowTheme,SetWindowTheme
 
         .shell32_dll: ; Shell32.dll
-        mov     eax,DLL_Shell32
-        ;stdcall GetOrLoadLibrary,eax,Shell32DLL
-        invoke  GetModuleHandleW,eax
-        mov     dword[Shell32DLL],eax
-        test    eax,eax
-        jz      .end
+        stdcall GetOrLoadLibrary,DLL_Shell32,Shell32DLL
         mov     ebx,eax
-        mov     eax,PROC_ShellExecuteW
-        stdcall GetFuncAddress,ebx,eax
-        mov     dword[_ShellExecuteW],eax
+        stdcall GetFuncAddress,ebx,PROC_ShellExecuteW,_ShellExecuteW
 
         .end:
         pop     ebx

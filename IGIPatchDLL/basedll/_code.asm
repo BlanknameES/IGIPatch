@@ -19,20 +19,17 @@ endp
 
 proc App_InitRunTimeDynamicLinking
 
-        locals
-                DLL_Kernel32 du 'Kernel32.dll',0
-                PROC_AddVectoredExceptionHandler db 'AddVectoredExceptionHandler',0
-        endl
-
         push    ebx
 
-        ; Kernel32.dll
-        lea     eax,[DLL_Kernel32]
-        stdcall GetOrLoadLibrary,eax,Kernel32DLL
+        .kernell32_dll: ; Kernel32.dll
+        stdcall GetOrLoadLibrary,DLL_Kernel32,Kernel32DLL
         mov     ebx,eax
-        lea     eax,[PROC_AddVectoredExceptionHandler]
-        stdcall GetFuncAddress,ebx,eax
-        mov     dword[AddVectoredExceptionHandler],eax
+        stdcall GetFuncAddress,ebx,PROC_AddVectoredExceptionHandler,AddVectoredExceptionHandler
+
+        .user32_dll: ; User32.dll
+        stdcall GetOrLoadLibrary,DLL_User32,User32DLL
+        mov     ebx,eax
+        stdcall GetFuncAddress,ebx,PROC_SetProcessDPIAware,SetProcessDPIAware
 
         .end:
         pop     ebx

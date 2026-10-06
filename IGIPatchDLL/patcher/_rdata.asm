@@ -19,6 +19,7 @@ wszPDCapInfo            du SubProjectName,': Info',0
 wszPDCapWarn            du SubProjectName,': Warning',0
 wszPDCapError           du SubProjectName,': Error',0
 
+wszPDPatchAlrLoaded     du 'Patch already loaded.',0
 wszPDPatchDisabled      du 'Patch is not enabled.',0
 wszPDUnknownVersion     du 'Unknown/unsupported version.',0
 wszPDPatchingSuccess    du 'Patching completed.',0

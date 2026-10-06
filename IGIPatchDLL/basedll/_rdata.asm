@@ -1,4 +1,14 @@
 ;------------------------------------------------------------
+; APIs
+;------------------------------------------------------------
+
+DLL_Kernel32                        du 'Kernel32.dll',0
+PROC_AddVectoredExceptionHandler    db 'AddVectoredExceptionHandler',0
+
+DLL_User32                          du 'User32.dll',0
+PROC_SetProcessDPIAware             db 'SetProcessDPIAware',0
+
+;------------------------------------------------------------
 ; fpu constants
 ;------------------------------------------------------------
 

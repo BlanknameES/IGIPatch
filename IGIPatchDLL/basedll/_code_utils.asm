@@ -116,14 +116,14 @@ endp
 ; libloaderapi.h
 ;------------------------------------------------------------
 
-proc GetOrLoadLibraryW hLibModule,hLoadedLib
+proc GetOrLoadLibraryW lpModuleName,hLibToFree
 
         push    esi edi
-        mov     esi,dword[hLibModule]
-        mov     edi,dword[hLoadedLib]
+        mov     esi,dword[lpModuleName]
+        mov     edi,dword[hLibToFree]
 
-        .init_handle:
-        mov     dword[edi],NULL
+        .init_lib2free:
+        mov     dword[edi],0
 
         .get_module:
         invoke  GetModuleHandleW,esi
@@ -135,7 +135,7 @@ proc GetOrLoadLibraryW hLibModule,hLoadedLib
         test    eax,eax
         jz      .end
 
-        .set_handle:
+        .set_lib2free:
         mov     dword[edi],eax
 
         .end:
@@ -143,15 +143,33 @@ proc GetOrLoadLibraryW hLibModule,hLoadedLib
         ret
 endp
 
-proc GetFuncAddress hModule,lpProcName
+proc GetFuncAddress hModule,lpProcName,lpfnProcAddr
 
         .check_null:
         mov     eax,dword[hModule]
         test    eax,eax
-        jz      .end
+        jz      .set_proc
 
         .get_addr:
         invoke  GetProcAddress,eax,dword[lpProcName]
+
+        .set_proc:
+        mov     ecx,dword[lpfnProcAddr]
+        mov     dword[ecx],eax
+
+        .end:
+        ret
+endp
+
+proc FreeLoadedLibrary hLibModule
+
+        .check_null:
+        mov     eax,dword[hLibModule]
+        test    eax,eax
+        jz      .end
+
+        .free_lib:
+        invoke  FreeLibrary,eax
 
         .end:
         ret

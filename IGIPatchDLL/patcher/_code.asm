@@ -2,6 +2,10 @@ proc StartPatch
 
         push    ebx
 
+        ; verify dll was not already loaded
+        cmp     dword[hThisExe],INVALID_HANDLE_VALUE
+        jne     .msg_already_loaded
+
         ; get process handle
         invoke  GetModuleHandle,NULL
         mov     dword[hThisExe],eax
@@ -47,6 +51,10 @@ proc StartPatch
         .end:
         pop     ebx
         ret
+
+        .msg_already_loaded:
+        stdcall Patcher_DMessageBox,NULL,wszPDPatchAlrLoaded,wszPDCapWarn,MB_OK+MB_ICONWARNING
+        jmp     .end
 
         .msg_patch_disabled:
         stdcall Patcher_DMessageBox,NULL,wszPDPatchDisabled,wszPDCapWarn,MB_OK+MB_ICONWARNING

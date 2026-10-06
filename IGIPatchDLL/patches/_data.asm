@@ -163,6 +163,9 @@ Direct3DRender_tDrawRigidMeshContext2 DrawRigidMeshContext2_t FALSE,0,<0.0,0.0,0
 Direct3DRender_tDrawBoneMeshContext2 DrawBoneMeshContext_t FALSE,0,<0.0,0.0,0.0>
 ;Direct3DRender_tDrawSplineMeshContext2 DrawSplineMeshContext2_t FALSE,0,<0.0,0.0,0.0>
 
+; anims interpolation
+AnimController_vAnimsSpeedMult  dd 1.0
+
 ; mouse static vars
 Mouse_IsLocked                  db FALSE
 align 4

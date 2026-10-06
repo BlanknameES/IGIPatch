@@ -73,7 +73,6 @@ OFN_szFileFilter        du 'Windows Executable (*.exe)',0,'*.exe',0,\
                            'IGI executable (IGI.exe)',0,'IGI.exe',0,\
                            'All Files (*.*)',0,'*.*',0,\
                            0
-
 OFN_szTitle             du 'Please select IGI.exe',0
 OFN_szDefExt            du 'exe',0
 

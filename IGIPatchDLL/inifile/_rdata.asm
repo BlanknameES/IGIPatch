@@ -35,6 +35,9 @@ ini_key_blp_scalingmode du 'WindowScalingMode',0
 ini_key_wsp_vp_scaling  du 'ViewportScalingMode',0
 ini_key_wsp_vp_fov_per  du 'ViewportFOVPercent',0
 
+; settings (ini_key_debugfeatures)
+ini_key_dfp_multiinst   du 'AllowMultiInstance',0
+
 ; settings (ini_key_mainmenu)
 ini_key_mmp_width       du 'MainMenuScreenWidth',0
 ini_key_mmp_height      du 'MainMenuScreenHeight',0

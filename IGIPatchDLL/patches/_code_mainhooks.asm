@@ -2652,6 +2652,30 @@ proc GameFunctions_SetEnableDebugKeys c isEnableDebugKeys
         ret
 endp
 
+loc_48F53F: ; WinMain
+
+        .wParam = -460h
+        .hMutex = -454h
+
+        xor     ebx,ebx
+        mov     dword[esp+474h+.wParam],ebx
+
+        .check_enabled:
+        cmp     dword[IniFile.DFP.AllowMultiInstance],FALSE
+        je      .back
+
+        .skip_mutex:
+        pop     ecx
+        mov     dword[esp+474h+.hMutex],ebx
+        jmp     near PATCHER_JUMP_TRAP ;loc_48F578
+        .fixup1 = $-4
+
+        .back:
+        push    1
+        push    ebx
+        jmp     near PATCHER_JUMP_TRAP ;loc_4D0356
+        .fixup2 = $-4
+
 ;------------------------------------------------------------
 ; MainMenuPatch
 ;------------------------------------------------------------
@@ -3371,43 +3395,15 @@ loc_424C20: ; Cursor_CreateHandler
 
 proc SetDPIAwareness
 
-        locals
-                dll_wstr du 'User32.dll',0
-                proc_cstr db 'SetProcessDPIAware',0
-        endl
-
-        push    ebx
-        xor     ebx,ebx
-
-        .get_module:
-        lea     eax,[dll_wstr]
-        invoke  GetModuleHandle,eax
-        test    eax,eax
-        jnz     .get_proc
-
-        .get_lib:
-        lea     eax,[dll_wstr]
-        invoke  LoadLibrary,eax
-        test    eax,eax
-        jz      .end
-        mov     ebx,eax
-
-        .get_proc:
-        lea     ecx,[proc_cstr]
-        invoke  GetProcAddress,eax,ecx
+        .check_proc:
+        mov     eax,dword[SetProcessDPIAware]
         test    eax,eax
         jz      .end
 
         .call_proc:
         call    eax
 
-        .free_lib:
-        test    ebx,ebx
-        jz      .end
-        invoke  FreeLibrary,ebx  ; this line should never be reached
-
         .end:
-        pop     ebx
         ret
 endp
 
@@ -4549,7 +4545,6 @@ loc_402260: ; Flow_RunHandler
         .render_drawinterp:
         ccall   Flow_CalcRenderFPS
         ccall   Flow_CalcDrawDeltaTime
-        ;ccall   Flow_CalcAnimsInterpTime
         ccall   Flow_UpdateInputOnInterp,dword[ebp+24h] ;ptFlow->ptInputPortQTask
         ccall   Flow_InterpChildren;,ebp
         ccall   Flow_UpdateInputOnDraw,dword[ebp+24h] ;ptFlow->ptInputPortQTask
@@ -4858,19 +4853,55 @@ endp
 
 proc Flow_CalcGLogicFPS c
 
+        .calc_glogic_fps:
         fild    qword[Flow_nGLogicDeltaTime]
         fmul    qword[AccTimer_vToSecsConvMult]
         fdivr   dword[FPU_CONSTS.flt_1_0]
         fstp    qword[Flow_vCurrentGLogicFPS]
+
+        .calc_anims_speed:
+        ccall   Flow_ResetAnimsSpeed
+
+        .end:
         ret
 endp
 
 proc Flow_CalcRenderFPS c
 
+        .calc_render_fps:
         fild    qword[Flow_nRenderDeltaTime]
         fmul    qword[AccTimer_vToSecsConvMult]
         fdivr   dword[FPU_CONSTS.flt_1_0]
         fstp    qword[Flow_vCurrentRenderFPS]
+
+        .calc_anims_speed:
+        ccall   Flow_CalcAnimsSpeed
+
+        .end:
+        ret
+endp
+
+proc Flow_ResetAnimsSpeed c
+
+        .reset:
+        mov     dword[AnimController_vAnimsSpeedMult],1.0
+
+        .end:
+        ret
+endp
+
+proc Flow_CalcAnimsSpeed c
+
+        .get_flow_ptr:
+        mov     eax,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
+        .fixup1 = $-4
+
+        .calc:
+        fild    dword[eax+3Ch] ;ptFlow->nFrequency
+        fdiv    qword[Flow_vCurrentRenderFPS]
+        fstp    dword[AnimController_vAnimsSpeedMult]
+
+        .end:
         ret
 endp
 
@@ -5761,18 +5792,43 @@ loc_465251: ; HumanView_UpdateBody
 
 loc_46553F: ; HumanView_UpdateBody
 
+        .ptHuman = 8
+
         add     esp,3*4
 
-        .check_phase:
-        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
-        je      near PATCHER_JUMP_TRAP ;loc_46560D
+        .is_human_player:
+        mov     ecx,dword[esp+140h+.ptHuman]
+        mov     dx,word[PATCHER_ADDR_TRAP] ;HumanPlayer_eQTaskType:0x005385B0
         .fixup1 = $-4
+        cmp     dx,word[ecx+1Ch] ;ptHuman->tBoneDynCubeObj.tModelObj.tDynCubeObj.tQObj.tQTask.eQTaskType
+        jne     .step
+
+        .check_interp:
+        ccall   Flow_IsInterpSuppressed
+        test    eax,eax
+        jnz     .step
+
+        .check_phase_interp_on:
+        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
+        jne     .skip
+
+        .step:
+        mov     dword[ebp+20Ch],-1
+        lea     ecx,[ebp+208h]
+        push    edi
+        push    ecx
+        call    near PATCHER_CALL_TRAP ;AnimController_Step:0x004D3210
+        .fixup2 = $-4
+        add     esp,2*4
 
         .back:
-        lea     ecx,[ebp+208h]
-        jmp     near PATCHER_JUMP_TRAP ;loc_465545
-        .fixup2 = $-4
+        mov     eax,dword[ebp+20Ch]
+        jmp     near PATCHER_JUMP_TRAP ;loc_46555F
+        .fixup3 = $-4
 
+        .skip:
+        jmp     near PATCHER_JUMP_TRAP ;loc_46560D
+        .fixup4 = $-4
 
 loc_46491B: ; HumanView_UpdateView
 
@@ -7087,6 +7143,17 @@ loc_4E0C8A: ; Shadow_MagicObjEnterHandler
         pop     ebp
         xor     eax,eax
         jmp     near PATCHER_JUMP_TRAP ;loc_4E0C8F
+        .fixup1 = $-4
+
+loc_4D4B95: ; sub_4D4B60
+
+        .calc:
+        fld     dword[esi+28h]
+        fmul    dword[AnimController_vAnimsSpeedMult]
+        fadd    dword[esi+2Ch]
+
+        .back:
+        jmp     near PATCHER_JUMP_TRAP ;loc_4D4B9B
         .fixup1 = $-4
 
 proc Flow_UpdateCInput c ptInputPort
