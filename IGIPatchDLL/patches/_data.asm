@@ -152,6 +152,10 @@ StationaryGun_isUsedByPlayer    dd FALSE
 ; used for interpolated shaking calculations
 HumanView_anUBRandomState       dd 3 dup (0)
 
+; viewport trans context for binoculars overlay
+Binocular_isViewportTransContextValid   dd FALSE
+Binocular_tViewportTransContext         rd 42
+
 ; ViewportQTask static vars
 ViewportQTask_ptLastSetQCamera  dd NULL
 
@@ -159,9 +163,9 @@ ViewportQTask_ptLastSetQCamera  dd NULL
 HumanView_tInterpPos            real64x3_t 0.0,0.0,0.0
 
 ; new function parameters passed indirectly
-Direct3DRender_tDrawRigidMeshContext2 DrawRigidMeshContext2_t FALSE,0,<0.0,0.0,0.0>
-Direct3DRender_tDrawBoneMeshContext2 DrawBoneMeshContext_t FALSE,0,<0.0,0.0,0.0>
-;Direct3DRender_tDrawSplineMeshContext2 DrawSplineMeshContext2_t FALSE,0,<0.0,0.0,0.0>
+Direct3DRender_tDrawRigidMeshContext2   DrawRigidMeshContext2_t FALSE,0,<0.0,0.0,0.0>
+Direct3DRender_tDrawBoneMeshContext2    DrawBoneMeshContext_t FALSE,0,<0.0,0.0,0.0>
+;Direct3DRender_tDrawSplineMeshContext2  DrawSplineMeshContext2_t FALSE,0,<0.0,0.0,0.0>
 
 ; anims interpolation
 AnimController_vAnimsSpeedMult  dd 1.0
@@ -173,7 +177,9 @@ Mouse_nRelPositionX             dd 0
 Mouse_nRelPositionY             dd 0
 Mouse_vCustomSensMultX          dd 1.0
 Mouse_vCustomSensMultY          dd 1.0
-Mouse_bButtonAcc                dd 0 ; buffered buttons swap
+Mouse_bButtonRaw                dd 0
+Mouse_bButtonAcc                dd 0
+Mouse_bWheelAcc                 dd 0
 
 ; per-phase analog values
 Mouse_vAnalogX                  dd 0.0
@@ -215,8 +221,8 @@ InputPort_P0Input_vAnalogY_M111 dd 0.0
 HumanPlayerInput_IsRunning      dd FALSE
 HumanPlayerInput_vChannel0      dd 0.0
 HumanPlayerInput_vChannel1      dd 0.0
-;HumanPlayerInput_vLastChannel0  dd 0.0 ; TODO
-;HumanPlayerInput_vLastChannel1  dd 0.0 ; TODO
+HumanPlayerInput_vLastChannel0  dd 0.0
+HumanPlayerInput_vLastChannel1  dd 0.0
 
 ; mouse sensitivity calc values
 InputOptions_vCurMouseSensX     dd 0.4

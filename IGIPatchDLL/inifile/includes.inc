@@ -63,6 +63,8 @@ struct INIFILE_SEC_NFL
         MaxRenderFPS                    dd ?
         EnableInterpolation             dd ?
         ShowFPSCounter                  dd ?
+        EnableMouseSmoothing            dd ?
+        EnableMouseDamping              dd ?
         MouseSensMultX                  dd ?
         MouseSensMultY                  dd ?
         MaxMouseSensMult                dd ?

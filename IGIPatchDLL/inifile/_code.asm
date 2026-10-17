@@ -72,6 +72,8 @@ proc IniFile_InitSettings pIniFile
         mov     dword[ebx+INIFILE.NFL.MaxRenderFPS],-1
         mov     dword[ebx+INIFILE.NFL.EnableInterpolation],TRUE
         mov     dword[ebx+INIFILE.NFL.ShowFPSCounter],FALSE
+        mov     dword[ebx+INIFILE.NFL.EnableMouseSmoothing],FALSE
+        mov     dword[ebx+INIFILE.NFL.EnableMouseDamping],FALSE
         mov     dword[ebx+INIFILE.NFL.MouseSensMultX],100
         mov     dword[ebx+INIFILE.NFL.MouseSensMultY],100
         mov     dword[ebx+INIFILE.NFL.MaxMouseSensMult],100
@@ -128,6 +130,8 @@ proc IniFile_ReadSettings pIniFile
         stdcall IniFile_ReadIntSetting,ebx,ini_key_newfpslimiter,ini_key_nfl_renderfps,INIFILE.NFL.MaxRenderFPS
         stdcall IniFile_ReadIntSetting,ebx,ini_key_newfpslimiter,ini_key_nfl_en_interp,INIFILE.NFL.EnableInterpolation
         stdcall IniFile_ReadIntSetting,ebx,ini_key_newfpslimiter,ini_key_nfl_fpscounter,INIFILE.NFL.ShowFPSCounter
+        stdcall IniFile_ReadIntSetting,ebx,ini_key_newfpslimiter,ini_key_nfl_msmoothing,INIFILE.NFL.EnableMouseSmoothing
+        stdcall IniFile_ReadIntSetting,ebx,ini_key_newfpslimiter,ini_key_nfl_mdamping,INIFILE.NFL.EnableMouseDamping
         stdcall IniFile_ReadIntSetting,ebx,ini_key_newfpslimiter,ini_key_nfl_mousesensx,INIFILE.NFL.MouseSensMultX
         stdcall IniFile_ReadIntSetting,ebx,ini_key_newfpslimiter,ini_key_nfl_mousesensy,INIFILE.NFL.MouseSensMultY
         stdcall IniFile_ReadIntSetting,ebx,ini_key_newfpslimiter,ini_key_nfl_maxmousesen,INIFILE.NFL.MaxMouseSensMult
@@ -294,6 +298,10 @@ proc IniFile_VerifySettings pIniFile
         stdcall IniFile_BooleanizeSetting,ebx,INIFILE.NFL.EnableInterpolation
         .nfp_set_fpscounter:
         stdcall IniFile_BooleanizeSetting,ebx,INIFILE.NFL.ShowFPSCounter
+        .nfp_set_msmoothing:
+        stdcall IniFile_BooleanizeSetting,ebx,INIFILE.NFL.EnableMouseSmoothing
+        .nfp_set_mdamping:
+        stdcall IniFile_BooleanizeSetting,ebx,INIFILE.NFL.EnableMouseDamping
         .nfp_clamp_sensx: ; valid range: 1 to 10'000 (0.01x to 100x)
         mov     eax,dword[ebx+INIFILE.NFL.MouseSensMultX]
         cmp     eax,1+1

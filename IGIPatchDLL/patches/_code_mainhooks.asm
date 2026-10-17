@@ -81,7 +81,7 @@ endp
 
 proc Display_GetRelAspectRatioInv c ; get inverted aspect ratio relative to 4:3
 
-        fld     dword[Display_vRelAspectRatioInv]
+        fld     dword[Display_vRelAspRatioInv]
         ret
 endp
 
@@ -1889,7 +1889,7 @@ endp
 ; WidescreenPatch
 ;------------------------------------------------------------
 
-proc TransContext_UpdateFOVData c ptTransContext,vFOV ; TODO: detect computer map, force 100% fov
+proc TransContext_UpdateFOVData c ptTransContext,vFOV
 
         mov     ecx,PATCHER_ADDR_TRAP ;RenderContext_tActiveRenderContext:0x00BCABA0
         .fixup1 = $-4
@@ -2673,7 +2673,7 @@ loc_48F53F: ; WinMain
         .back:
         push    1
         push    ebx
-        jmp     near PATCHER_JUMP_TRAP ;loc_4D0356
+        jmp     near PATCHER_JUMP_TRAP ;loc_48F544
         .fixup2 = $-4
 
 ;------------------------------------------------------------
@@ -4054,6 +4054,11 @@ Flow_IsInterpSuppressed:
         cmp     dword[StationaryGun_isUsedByPlayer],FALSE
         jne     .yes
 
+        .check_computermap: ; kinda buggy
+        cmp     dword[PATCHER_ADDR_TRAP],NULL ;ComputerMap_ptComputerMap:0x005BDD98
+        .fixup1 = $-1-4
+        jne     .yes
+
         .no:
         xor     eax,eax
         retn    0
@@ -4068,8 +4073,9 @@ Flow_RunChildren:
         .ptFlow = 4
 
         push    ebx ebp esi edi
-        mov     ebp,dword[esp+10h+.ptFlow]
         mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
+
+        .reset_phase_vars:
         mov     dword[Flow_isForbidDrawOneTick],FALSE
         mov     dword[CutScene_isRunning],FALSE
         mov     dword[StationaryGun_isUsedByPlayer],FALSE ; temp workaround
@@ -4077,6 +4083,7 @@ Flow_RunChildren:
         ccall   DebugText_Reset
 
         .init_vars:
+        mov     ebp,dword[esp+10h+.ptFlow]
         mov     esi,PATCHER_ADDR_TRAP ;QTask_atProtectedQTaskStack:0x00AFA6E0
         .fixup1 = $-4
         mov     edi,PATCHER_ADDR_TRAP ;&QTask_nProtectedQTaskStackOffset:0x00AFA7E0
@@ -4137,7 +4144,7 @@ Flow_RunChildren:
 
         .check_children_ar:
         cmp     dword[ebx],0 ;ptQTask->ptNext
-        je      .update_vars
+        je      .update_phase_vars
 
         .loop2_init:
         mov     ecx,dword[edi] ;QTask_nProtectedQTaskStackOffset
@@ -4181,7 +4188,7 @@ Flow_RunChildren:
         test    ebx,ebx
         jnz     .loop2_body
 
-        .update_vars:
+        .update_phase_vars:
         inc     dword[ebp+34h] ;ptFlow->nTicks
         inc     dword[ebp+40h] ;ptFlow->nTicksSinceRedraw
         ;mov     byte[ebp+44h],FALSE ;ptFlow->isDrawn
@@ -4246,7 +4253,7 @@ Flow_DrawChildren:
 
         .check_forbid_draw:
         cmp     dword[Flow_isForbidDrawOneTick],FALSE
-        jne     .update_vars
+        jne     .update_phase_vars
 
         .init_vars:
         mov     esi,PATCHER_ADDR_TRAP ;QTask_atProtectedQTaskStack:0x00AFA6E0
@@ -4263,7 +4270,7 @@ Flow_DrawChildren:
         .check_children:
         mov     ebx,dword[eax+8] ;ptFlow->tQTask.tQTaskChildren.ptHead
         cmp     dword[ebx],0 ;ptQTask->ptNext
-        je      .update_vars
+        je      .update_phase_vars
 
         .loop_init:
         mov     ecx,dword[edi] ;QTask_nProtectedQTaskStackOffset
@@ -4307,7 +4314,7 @@ Flow_DrawChildren:
         test    ebx,ebx
         jnz     .loop_body
 
-        .update_vars:
+        .update_phase_vars:
         mov     eax,dword[esp+10h+.ptFlow]
         inc     dword[eax+38h] ;ptFlow->nFrames
         mov     dword[eax+40h],0 ;ptFlow->nTicksSinceRedraw
@@ -4875,7 +4882,7 @@ proc Flow_CalcRenderFPS c
         fstp    qword[Flow_vCurrentRenderFPS]
 
         .calc_anims_speed:
-        ccall   Flow_CalcAnimsSpeed
+        ccall   Flow_CalcAnimsSpeedMult
 
         .end:
         ret
@@ -4890,7 +4897,7 @@ proc Flow_ResetAnimsSpeed c
         ret
 endp
 
-proc Flow_CalcAnimsSpeed c
+proc Flow_CalcAnimsSpeedMult c
 
         .get_flow_ptr:
         mov     eax,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
@@ -5027,15 +5034,6 @@ proc Flow_PrintFPSCounter c
         ccall   DebugText_printf_NEW,cstrRenderFPSCounter,dword[Flow_vAverageRenderFPS],dword[Flow_vAverageRenderFPS+4]
 
         .end:
-        ret
-endp
-
-proc Flow_CalcAnimsInterpTime c ; TODO: add accumulator for precise durations
-
-        ;fld     dword[Flow_vCurrentRenderFPS]
-        ;fdivr   dword[PATCH_TEMP_ADDR] ;flt_534B14 - 4800.0
-        ;.fixup1 = $-4
-        ;fstp    dword[AnimController_vInterpTimeStep]
         ret
 endp
 
@@ -5256,25 +5254,18 @@ proc HumanPlayer_DrawInterpolateHandler c ptHumanPlayer
         mov     ebx,dword[ptHumanPlayer]
 
         .human_update_body:
-        push    ebx
-        call    near PATCHER_CALL_TRAP ;Human_UpdateBody:0x004610C0
-        .fixup1 = $-4
-        add     esp,1*4
+        ccall   Human_InterpBody,ebx
 
         .humanview_update_view:
         mov     eax,dword[ebx+4ECh] ;ptHumanPlayer->tHuman.ptHumanViewQTask
-        push    ebx
-        push    eax
-        call    near PATCHER_CALL_TRAP ;HumanView_UpdateView:0x00464800
-        .fixup2 = $-4
-        add     esp,2*4
+        ccall   HumanView_InterpView,eax,ebx
 
         .humanview_update_body:
         mov     eax,dword[ebx+4ECh] ;ptHumanPlayer->tHuman.ptHumanViewQTask
         push    ebx
         push    eax
         call    near PATCHER_CALL_TRAP ;HumanView_UpdateBody:0x00464BD0
-        .fixup3 = $-4
+        .fixup1 = $-4
         add     esp,2*4
 
         .end:
@@ -5309,7 +5300,7 @@ proc HumanCamera_DrawInterpolateHandler c ptHumanCamera
         test    eax,eax
         jnz     .end
 
-        .get_human_taskref:
+        .get_human_taskref: ; calls HumanPlayer_DrawInterpolateHandler
         mov     eax,dword[esi+68h] ;ptHumanCamera->ptHumanQTaskRef
         test    eax,eax
         jz      .draw_interp_humancamera
@@ -5330,7 +5321,7 @@ proc HumanCamera_DrawInterpolateHandler c ptHumanCamera
         jz      .draw_interp_humancamera
         ccall   edx,edi
 
-        .draw_interp_humancamera:
+        .draw_interp_humancamera: ; calls HumanCamera_RunHandler
         movzx   eax,word[esi+1Ch] ;ptHumanCamera->tQTask.eQTaskType
         add     eax,384
         mov     edx,dword[PATCHER_ADDR_TRAP+eax*4] ;QTask_aatQTaskFinalEvent:0x00A96AE0
@@ -5801,46 +5792,46 @@ loc_46553F: ; HumanView_UpdateBody
         mov     dx,word[PATCHER_ADDR_TRAP] ;HumanPlayer_eQTaskType:0x005385B0
         .fixup1 = $-4
         cmp     dx,word[ecx+1Ch] ;ptHuman->tBoneDynCubeObj.tModelObj.tDynCubeObj.tQObj.tQTask.eQTaskType
-        jne     .step
+        jne     .clear_trigger
 
         .check_interp:
         ccall   Flow_IsInterpSuppressed
         test    eax,eax
-        jnz     .step
+        jnz     .clear_trigger
 
         .check_phase_interp_on:
         cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
         jne     .skip
 
-        .step:
+        .check_1st_frame:
+        mov     ecx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
+        .fixup2 = $-4
+        cmp     dword[ecx+44h],0 ;ptFlow->nFramesSinceLastTick
+        jne     .update_channels
+
+        .clear_trigger:
         mov     dword[ebp+20Ch],-1
+
+        .update_channels:
         lea     ecx,[ebp+208h]
         push    edi
         push    ecx
-        call    near PATCHER_CALL_TRAP ;AnimController_Step:0x004D3210
-        .fixup2 = $-4
+        call    near PATCHER_CALL_TRAP ;AnimController_UpdateChannels:0x004D3210
+        .fixup3 = $-4
         add     esp,2*4
+
+        .check_event:
+        test    eax,eax
+        jz      .skip
 
         .back:
         mov     eax,dword[ebp+20Ch]
         jmp     near PATCHER_JUMP_TRAP ;loc_46555F
-        .fixup3 = $-4
+        .fixup4 = $-4
 
         .skip:
         jmp     near PATCHER_JUMP_TRAP ;loc_46560D
-        .fixup4 = $-4
-
-loc_46491B: ; HumanView_UpdateView
-
-        .check_phase:
-        cmp     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_INTERP
-        je      near PATCHER_JUMP_TRAP ;loc_464989
-        .fixup1 = $-4
-
-        .back:
-        fld     dword[esi+1F0h] ;ptHuman->avChannel[16]
-        jmp     near PATCHER_JUMP_TRAP ;loc_464921
-        .fixup2 = $-4
+        .fixup5 = $-4
 
 loc_45FD58: ; Human_GetHumanCameraInfoHandler
 
@@ -5945,6 +5936,89 @@ loc_4828D0: ;HumanCamera_ControlListInput
 
         .end:
         retn    0
+
+loc_4E7F97: ; ViewportQTask_DrawHandler
+
+        add     esp,1Ch
+
+        .capture_context:
+        mov     esi,PATCHER_ADDR_TRAP ;TransContext_tActiveTransContext:0x00BCAAE0
+        .fixup1 = $-4
+        mov     edi,Binocular_tViewportTransContext
+        mov     ecx,42 ;sizeof(TransContext_s)/4
+        rep     movsd
+        mov     dword[Binocular_isViewportTransContextValid],TRUE
+
+        .back:
+        mov     ecx,dword[ebx+0BCh]
+        jmp     near PATCHER_JUMP_TRAP ;loc_4E7FA0
+        .fixup2 = $-4
+
+loc_471440: ; BinocularOverlay_StatusDisplayHandler
+
+        .ptBinocularOverlay = 4
+
+        push    esi edi
+
+        .check_captured:
+        cmp     dword[Binocular_isViewportTransContextValid],FALSE
+        je      .back
+
+        .get_bin_overlay_ptr:
+        mov     eax,dword[esp+8+.ptBinocularOverlay]
+
+        .copy_context:
+        mov     esi,Binocular_tViewportTransContext
+        lea     edi,[eax+88h] ;&ptBinocularOverlay->tTransContext
+        mov     ecx,42 ;sizeof(TransContext_s)/4
+        rep     movsd
+
+        .copy_pos:
+        mov     esi,Binocular_tViewportTransContext+28h
+        lea     edi,[eax+60h] ;&ptBinocularOverlay->tPos
+        mov     ecx,6
+        rep     movsd
+
+        .copy_dir:
+        mov     edx,dword[Binocular_tViewportTransContext+18h]
+        mov     esi,dword[Binocular_tViewportTransContext+1Ch]
+        mov     edi,dword[Binocular_tViewportTransContext+20h]
+        mov     dword[eax+7Ch],edx ;ptBinocularOverlay->tDirection.vX
+        mov     dword[eax+7Ch+4],esi ;ptBinocularOverlay->tDirection.vY
+        mov     dword[eax+7Ch+8],edi ;ptBinocularOverlay->tDirection.vZ
+
+        .skip_create_trans_context:
+        mov     esi,eax
+        lea     edi,[esi+88h] ;&ptBinocularOverlay->tTransContext
+        jmp     near PATCHER_JUMP_TRAP ;loc_47145E
+        .fixup1 = $-4
+
+        .back:
+        mov     esi,dword[esp+8+.ptBinocularOverlay]
+        lea     edi,[esi+88h] ;&ptBinocularOverlay->tTransContext
+        jmp     near PATCHER_JUMP_TRAP ;loc_471446
+        .fixup2 = $-4
+
+loc_471C26: ; BinocularOverlay_TrackMovement
+
+        .tPos = -30h
+
+        .check_ticks:
+        mov     edx,dword[ebp+64h] ;ptHuman->tBoneDynCubeObj.tModelObj.tDynCubeObj.ptInterpData
+        cmp     dword[edx+DynCubeObjInterpData_s.nTicks],1
+        sbb     esi,esi
+        neg     esi
+
+        .calc_interp_pos:
+        lea     eax,[esp+98h+.tPos]
+        lea     ecx,[ebp+20h] ;ptHuman->tBoneDynCubeObj.tModelObj.tDynCubeObj.tQObj.tPos
+        lea     edx,[edx+DynCubeObjInterpData_s.tOldPos]
+        ccall   Flow_CalcInterpolatedPos,eax,ecx,edx,esi
+
+        .back:
+        push    0
+        jmp     near PATCHER_JUMP_TRAP ;loc_471C36
+        .fixup1 = $-4
 
 proc Flow_GetDrawDeltaTime c
 
@@ -7173,6 +7247,9 @@ proc Flow_UpdateInputOnRun c ptInputPort
 
         mov     dword[Flow_nCurrentPhase],NFL_FLOW_PHASE_RUN
 
+        .update_mouse_buttons:
+        ccall   Mouse_ReadBufferedButtons
+
         .update_mouse_phases:
         ccall   Mouse_UpdatePhaseInputs
 
@@ -7215,6 +7292,11 @@ proc Flow_UpdateInputOnDraw c ptInputPort
 endp
 
 proc InputOptions_UpdateMouseSensitivity c
+
+        locals
+                vAspectRatioMulX dd ?
+                vAspectRatioMulY dd ?
+        endl
 
         push    ebx
 
@@ -7275,15 +7357,42 @@ proc InputOptions_UpdateMouseSensitivity c
         xor     ecx,eax
         mov     dword[InputOptions_vCurMouseSensY],ecx
 
+        .check_scaling_mode:
+        xor     ebx,ebx ;isHorP
+        xor     eax,eax
+        cmp     dword[IniFile.WSP.ViewportScalingMode],0 ; hor+
+        sete    bl
+        cmp     dword[IniFile.Modules.WidescreenPatch],FALSE
+        setne   al
+        and     ebx,eax
+
+        .calc_aspect_ratio_mul:
+        mov     eax,ebx
+        mov     ecx,dword[Display_vRelAspectRatio]
+        mov     edx,ecx
+        neg     ebx
+        sub     ecx,1.0
+        and     ecx,ebx
+        add     ecx,1.0
+        mov     dword[vAspectRatioMulX],ecx
+        dec     eax
+        sub     edx,1.0
+        and     edx,eax
+        add     edx,1.0
+        mov     dword[vAspectRatioMulY],edx
+
         .apply_custom_mult:
         fld     dword[InputOptions_vCurMouseSensX]
         fmul    dword[Mouse_vCustomSensMultX]
+        fmul    dword[vAspectRatioMulX]
         fstp    dword[InputOptions_vCurMouseSensX]
         fld     dword[InputOptions_vCurMouseSensY]
         fmul    dword[Mouse_vCustomSensMultY]
+        fmul    dword[vAspectRatioMulY]
         fstp    dword[InputOptions_vCurMouseSensY]
         fld     dword[InputOptions_vCurMouseSensYIgn]
         fmul    dword[Mouse_vCustomSensMultY]
+        fmul    dword[vAspectRatioMulY]
         fstp    dword[InputOptions_vCurMouseSensYIgn]
 
         .end:
@@ -7306,7 +7415,7 @@ proc Mouse_ClearInput c
         .check_wininput:
         cmp     dword[PATCHER_ADDR_TRAP],FALSE ;AppContext_tAppContext.isWinMessageInput:0x005C8BE0
         .fixup2 = $-1-4
-        jne     .end
+        je      .end
 
         .clear_wininput:
         mov     dword[PATCHER_ADDR_TRAP],eax ;Mouse_nLButtonDown:0x005C8E10
@@ -7385,7 +7494,12 @@ proc Mouse_WriteBufferedButtons c
         .write_mouse_buffered_buttons:
         mov     eax,dword[PATCHER_ADDR_TRAP] ;Mouse_tMouse.bButton:0x00C28F8C
         .fixup1 = $-4
-        or      dword[Mouse_bButtonAcc],eax  
+        mov     ecx,eax
+        and     ecx,300h
+        or      dword[Mouse_bWheelAcc],ecx
+        and     eax,not 300h
+        mov     dword[Mouse_bButtonRaw],eax
+        or      dword[Mouse_bButtonAcc],eax
 
         .end:
         ret
@@ -7393,28 +7507,37 @@ endp
 
 proc Mouse_ReadBufferedButtons c
 
+        push    ebx
+
+        .use_raw:
+        mov     ebx,dword[Mouse_bButtonRaw]
+
         .check_interp: ; skip buffered button handling if interp is disabled
         ccall   Flow_IsInterpSuppressed
+        xor     edx,edx
         test    eax,eax
-        jnz     .end
+        jnz     .read_buttons
 
         .check_render_fps: ; skip buffered buttons handling if render fps < glogic fps
         mov     ecx,dword[PATCHER_ADDR_TRAP] ;Flow_ptFlow:0x00567C8C
         .fixup1 = $-4
-        ;cmp     dword[ecx+44h],0 ;ptFlow->nFramesSinceLastTick
-        cmp     dword[ecx+44h],eax ;ptFlow->nFramesSinceLastTick
-        je      .end
+        cmp     dword[ecx+44h],edx ;ptFlow->nFramesSinceLastTick
+        je      .read_buttons
 
-        .read_mouse_buffered_buttons:
-        mov     edx,dword[Mouse_bButtonAcc]
-        mov     dword[PATCHER_ADDR_TRAP],edx ;Mouse_tMouse.bButton:0x00C28F8C
+        .use_acc:
+        mov     ebx,dword[Mouse_bButtonAcc]
+
+        .read_buttons:
+        or      ebx,dword[Mouse_bWheelAcc]
+        mov     dword[PATCHER_ADDR_TRAP],ebx ;Mouse_tMouse.bButton:0x00C28F8C
         .fixup2 = $-4
 
-        .reset_mouse_buffered_buttons:
-        ;mov     dword[Mouse_bButtonAcc],0
-        mov     dword[Mouse_bButtonAcc],eax
+        .reset_button_acc:
+        mov     dword[Mouse_bButtonAcc],edx
+        mov     dword[Mouse_bWheelAcc],edx
 
         .end:
+        pop     ebx
         ret
 endp
 
@@ -7440,7 +7563,6 @@ proc Mouse_UpdatePhaseInputs c
         fmul    dword[Mouse_vScaleFactorInv]
         fild    dword[Mouse_nRelPositionY]
         fmul    dword[Mouse_vScaleFactorInv]
-        fmul    dword[Display_vAspectRatio]
         mov     dword[Mouse_nRelPositionX],ebp
         mov     dword[Mouse_nRelPositionY],ebp
 
@@ -7492,7 +7614,7 @@ endp
 proc InputPort_RunHandler_NEW c ptInputPort
 
         .reset_playerinput:
-        mov     dword[HumanPlayerInput_IsRunning],FALSE
+        ccall   HumanPlayerInput_Reset
 
         .update_lp_devices: ; update low priority devices (keyboard, joypad)
         call    near PATCHER_CALL_TRAP ;Keyboard_Update:0x00490230
@@ -7500,14 +7622,11 @@ proc InputPort_RunHandler_NEW c ptInputPort
         call    near PATCHER_CALL_TRAP ;Joypad_Update:0x00509CF0
         .fixup2 = $-4
 
-        .update_mouse_buttons:
-        ccall   Mouse_ReadBufferedButtons
+        .update_inputport:
+        ccall   InputPort_Update,dword[ptInputPort]
 
         .update_sens_mult:
         ccall   InputOptions_UpdateMouseSensitivity
-
-        .update_inputport:
-        ccall   InputPort_Update,dword[ptInputPort]
 
         .end:
         ret
@@ -7851,6 +7970,29 @@ proc HumanPlayer_GetMouseDeltaYForPhaseNoInv c bPhaseMask ; ignore invert mouse 
         ret
 endp
 
+proc HumanPlayerInput_Reset c
+
+        .update_last:
+        mov     eax,dword[HumanPlayerInput_IsRunning]
+        mov     ecx,dword[HumanPlayerInput_vChannel0]
+        mov     edx,dword[HumanPlayerInput_vChannel1]
+        neg     eax
+        sbb     eax,eax
+        and     ecx,eax
+        and     edx,eax
+        mov     dword[HumanPlayerInput_vLastChannel0],ecx
+        mov     dword[HumanPlayerInput_vLastChannel1],edx
+
+        .reset_current:
+        xor     eax,eax
+        mov     dword[HumanPlayerInput_IsRunning],eax
+        mov     dword[HumanPlayerInput_vChannel0],eax
+        mov     dword[HumanPlayerInput_vChannel1],eax
+
+        .end:
+        ret
+endp
+
 proc HumanPlayerInput_GetChannel0 c ptHumanPlayer
 
         .check_channellock:
@@ -7963,7 +8105,7 @@ loc_45E07E: ; HumanPlayerInput_ReadChannels
         ccall   HumanPlayer_GetMouseDeltaYForPhase,NFL_FLOW_PHASE_MASK_RUN
         fstp    dword[esi+4] ;avChannel[1]
 
-        .save_deltas_backup:
+        .save_deltas_backup: ; InputPort_RunHandler (which calls HumanPlayerInput_Reset) appears to run first.
         mov     eax,dword[esi]
         mov     ecx,dword[esi+4]
         mov     dword[HumanPlayerInput_vChannel0],eax
@@ -8000,59 +8142,322 @@ loc_45E0E4: ; HumanPlayerInput_ReadChannels
         jmp     near PATCHER_JUMP_TRAP ;loc_45E159
         .fixup1 = $-4
 
-loc_4612D7: ; Human_UpdateBody
+loc_4612CD: ; Human_UpdateBody
 
-        fcomp   dword[ebp+1E4h]
-        fnstsw  ax
-        push    esi
-        movzx   esi,ax
+        .check_orientation_locked:
+        cmp     byte[ebx+510h],0 ;ptHuman->isLockOrientation
+        jne     .zero_ideal_gamma
 
         .is_player:
-        mov     ax,word[PATCHER_ADDR_TRAP] ;HumanPlayer_eQTaskType:0x005385B0
+        mov     dx,word[PATCHER_ADDR_TRAP] ;HumanPlayer_eQTaskType:0x005385B0
         .fixup1 = $-4
-        cmp     ax,word[ebx+1Ch] ;ptHuman->tBoneDynCubeObj.tModelObj.tDynCubeObj.tQObj.tQTask.eQTaskType
+        cmp     dx,word[ebx+1Ch] ;ptHuman->tBoneDynCubeObj.tModelObj.tDynCubeObj.tQObj.tQTask.eQTaskType
         jne     .get_analogx
 
         .get_analogx_player:
         ccall   HumanPlayerInput_GetChannel0,ebx
-        jmp     .back
+        jmp     .calc_ideal_gamma
 
         .get_analogx:
         fld     dword[ebx+1B0h] ;ptHuman->avChannel[0]
 
-        .back:
-        mov     eax,esi
-        pop     esi
-        xor     ecx,ecx
-        jmp     near PATCHER_JUMP_TRAP ;loc_4612E5
+        .calc_ideal_gamma:
+        ;fmul    dword[PATCHER_ADDR_TRAP] ;flt_533400:0x00533400 -> 3.1415927
+        fmul    dword[PATCHER_ADDR_TRAP] ;flt_533468:0x00533468 -> 1.5707964
         .fixup2 = $-4
+        fmul    dword[ebp+1E4h] ;ptHumanView->vFOV
+        fchs
+        fadd    dword[ebx+50Ch] ;ptHuman->vIdealGamma
+        fadd    dword[ebx+764h] ;ptHuman->delta_move_gamma
 
-loc_464826: ; HumanView_UpdateView
+        .set_orientation:
+        xor     eax,eax
+        mov     dword[ebx+4FCh],eax ;ptHuman->vIdealAlpha
+        mov     dword[ebx+4F8h],eax ;ptHuman->vAlpha
+        mov     dword[ebx+504h],eax ;ptHuman->vIdealBeta
+        mov     dword[ebx+500h],eax ;ptHuman->vBeta
+        fst     dword[ebx+50Ch] ;ptHuman->vIdealGamma
+        fadd    dword[ebp+134h] ;ptHumanView->vOffsetViewGamma
+        fstp    dword[ebx+508h] ;ptHuman->vGamma
 
-        .a2 = 8
+        .back:
+        jmp     near PATCHER_JUMP_TRAP ;loc_46139B
+        .fixup3 = $-4
 
+        .zero_ideal_gamma:
+        fldz
+        fadd    dword[ebx+50Ch] ;ptHuman->vIdealGamma
+        fadd    dword[ebx+764h] ;ptHuman->delta_move_gamma
+        jmp     .set_orientation
+
+proc Human_InterpBody c ptHuman
+
+        .vDefaultFOV equ 1.0 ; tangent of 45 degrees
+
+        ;locals
+        ;        vUnzoomedFOV dd .vDefaultFOV
+        ;endl
+
+        push    ebx esi edi
+        xor     ebx,ebx
+        mov     esi,dword[ptHuman]
+        mov     edi,dword[esi+4ECh] ;ptHuman->ptHumanViewQTask
+
+        .check_attach_task:
+        cmp     dword[esi+76Ch],ebx ;ptHuman->ptAttachQTask
+        jne     .save_orientation
+
+        .check_orientation_locked:
+        cmp     byte[esi+510h],bl ;ptHuman->isLockOrientation
+        jne     .zero_ideal_gamma
+
+        ;.check_zoom:
+        ;fld     dword[edi+1E4h] ;ptHumanView->vFOV
+        ;fcomp   dword[vUnzoomedFOV]
+        ;fnstsw  ax
+        ;xor     ecx,ecx
         ;test    ah,40h
-        ;jz      .zoomed
+        ;setnz   cl ; ecx = isMouseFilteringOn
+
+        .calc_ideal_gamma: ; TODO: implement back mouse smoothing/damping
+        ccall   HumanPlayerInput_GetChannel0,esi;,ecx
+        ;fmul    dword[PATCHER_ADDR_TRAP] ;flt_533400:0x00533400 -> 3.1415927
+        fmul    dword[PATCHER_ADDR_TRAP] ;flt_533468:0x00533468 -> 1.5707964
+        .fixup1 = $-4
+        fmul    dword[edi+1E4h] ;ptHumanView->vFOV
+        fchs
+        fadd    dword[esi+50Ch] ;ptHuman->vIdealGamma
+        fadd    dword[esi+764h] ;ptHuman->delta_move_gamma
+
+        .set_orientation:
+        mov     dword[esi+4FCh],ebx ;ptHuman->vIdealAlpha
+        mov     dword[esi+4F8h],ebx ;ptHuman->vAlpha
+        mov     dword[esi+504h],ebx ;ptHuman->vIdealBeta
+        mov     dword[esi+500h],ebx ;ptHuman->vBeta
+        fst     dword[esi+50Ch] ;ptHuman->vIdealGamma
+        fadd    dword[edi+134h] ;ptHumanView->vOffsetViewGamma
+        fstp    dword[esi+508h] ;ptHuman->vGamma
+
+        .save_orientation:
+        mov     edx,dword[esi+508h] ;ptHuman->vGamma
+        mov     ecx,dword[esi+500h] ;ptHuman->vBeta
+        mov     eax,dword[esi+4F8h] ;ptHuman->vAlpha
+        lea     esi,[esi+78h] ;&ptHuman->tBoneDynCubeObj.tOrientation
+        push    edx
+        push    ecx
+        push    eax
+        push    esi
+        call    near PATCHER_CALL_TRAP ;Real32x9_Create:0x004B38E0
+        .fixup2 = $-4
+        add     esp,4*4
+
+        .end:
+        pop     edi esi ebx
+        ret
+
+        .zero_ideal_gamma:
+        fldz
+        fadd    dword[esi+50Ch] ;ptHuman->vIdealGamma
+        fadd    dword[esi+764h] ;ptHuman->delta_move_gamma
+        jmp     .set_orientation
+endp
+
+loc_464800: ; HumanView_UpdateView
+
+        .vDefaultFOV equ 1.0 ; tangent of 45 degrees
+
+        .ptHumanView = 4
+        .vUnzoomedFOV = 4
+        .ptHuman = 8
+
+        push    ebx ebp esi edi
+        mov     ebx,dword[esp+10h+.ptHumanView]
+        mov     esi,dword[esp+10h+.ptHuman]
+        mov     dword[esp+10h+.vUnzoomedFOV],.vDefaultFOV
+
+        .check_orientation_locked:
+        cmp     byte[ebx+138h],0 ;ptHumanView->isLockOrientation
+        jne     .zero_ideal_view_alpha
+
+        .check_unk_pos_180:
+        lea     eax,[ebx+180h] ;&ptHumanView->tUnknownPos_180
+        push    eax
+        call    near PATCHER_CALL_TRAP ;Real64x3_NullVector:0x004B3320
+        .fixup1 = $-4
+        add     esp,1*4
+        test    eax,eax
+        jz      .zero_ideal_view_alpha
 
         .is_player:
-        mov     ax,word[PATCHER_ADDR_TRAP] ;HumanPlayer_eQTaskType:0x005385B0
-        .fixup1 = $-4
-        cmp     ax,word[esi+1Ch] ;ptHuman->tBoneDynCubeObj.tModelObj.tDynCubeObj.tQObj.tQTask.eQTaskType
+        mov     dx,word[PATCHER_ADDR_TRAP] ;HumanPlayer_eQTaskType:0x005385B0
+        .fixup2 = $-4
+        cmp     dx,word[esi+1Ch] ;ptHuman->tBoneDynCubeObj.tModelObj.tDynCubeObj.tQObj.tQTask.eQTaskType
         jne     .get_analogy
 
         .get_analogy_player:
         ccall   HumanPlayerInput_GetChannel1,esi
-        jmp     .back
+        jmp     .calc_ideal_view_alpha
 
         .get_analogy:
         fld     dword[esi+1B4h] ;ptHuman->avChannel[1]
 
-        .back:
-        fmul    qword[PATCHER_ADDR_TRAP] ;dbl_5335C0:0x005335C0 -> 0.5f
-        .fixup2 = $-4
-        fstp    dword[esp+10h+.a2]
-        jmp     near PATCHER_JUMP_TRAP ;loc_46484D
+        .calc_ideal_view_alpha:
+        ;fmul    dword[PATCHER_ADDR_TRAP] ;flt_533400:0x00533400 -> 3.1415927
+        fmul    dword[PATCHER_ADDR_TRAP] ;flt_533468:0x00533468 -> 1.5707964
         .fixup3 = $-4
+        fmul    dword[ebx+1E4h] ;ptHumanView->vFOV
+        ;fchs
+        fadd    dword[ebx+124h] ;ptHumanView->vIdealViewAlpha
+
+        .back:
+        jmp     near PATCHER_JUMP_TRAP ;loc_4648D1
+        .fixup4 = $-4
+
+        .zero_ideal_view_alpha:
+        fldz
+        jmp     .back
+
+proc HumanView_InterpView c ptHumanView,ptHuman
+
+        .vDefaultFOV equ 1.0 ; tangent of 45 degrees
+        .vViewRotLimitP equ 1.5707964 ; 90 degrees
+        .vViewRotLimitN equ -1.5707964 ; -90 degrees
+
+        locals
+                ;vUnzoomedFOV dd .vDefaultFOV
+                vViewRotLimitP dd .vViewRotLimitP
+                vViewRotLimitN dd .vViewRotLimitN
+        endl
+
+        push    ebx esi edi
+        xor     ebx,ebx
+        mov     esi,dword[ptHumanView]
+        mov     edi,dword[ptHuman]
+
+        .check_orientation_locked:
+        cmp     byte[esi+138h],bl ;ptHumanView->isLockOrientation
+        jne     .zero_ideal_view_alpha
+
+        .check_unk_pos_180:
+        lea     eax,[esi+180h] ;&ptHumanView->tUnknownPos_180
+        push    eax
+        call    near PATCHER_CALL_TRAP ;Real64x3_NullVector:0x004B3320
+        .fixup1 = $-4
+        add     esp,1*4
+        test    eax,eax
+        jz      .zero_ideal_view_alpha
+
+        ;.check_zoom:
+        ;fld     dword[esi+1E4h] ;ptHumanView->vFOV
+        ;fcomp   dword[vUnzoomedFOV]
+        ;fnstsw  ax
+        ;xor     ecx,ecx
+        ;test    ah,40h
+        ;setnz   cl ; ecx = isMouseFilteringOn
+
+        .calc_ideal_view_alpha: ; TODO: implement back mouse smoothing/damping
+        ccall   HumanPlayerInput_GetChannel1,edi;,ecx
+        ;fmul    dword[PATCHER_ADDR_TRAP] ;flt_533400:0x00533400 -> 3.1415927
+        fmul    dword[PATCHER_ADDR_TRAP] ;flt_533468:0x00533468 -> 1.5707964
+        .fixup2 = $-4
+        fmul    dword[esi+1E4h] ;ptHumanView->vFOV
+        ;fchs
+        fadd    dword[esi+124h] ;ptHumanView->vIdealViewAlpha
+
+        .check_ideal_view_alpha_min:
+        fcom    dword[vViewRotLimitN]
+        fnstsw  ax
+        test    ah,1
+        jnz     .clamp_ideal_view_alpha_min
+
+        .check_ideal_view_alpha_max:
+        fcom    dword[vViewRotLimitP]
+        fnstsw  ax
+        test    ah,41h
+        jz      .clamp_ideal_view_alpha_max
+
+        .set_ideal_view_alpha:
+        fstp    dword[esi+124h] ;ptHumanView->vIdealViewAlpha
+
+        .set_view_alpha:
+        fld     dword[esi+124h] ;ptHumanView->vIdealViewAlpha
+        fadd    dword[esi+128h] ;ptHumanView->vOffsetViewAlpha
+        fstp    dword[esi+120h] ;ptHumanView->vViewAlpha
+
+        .get_view_alpha:
+        fld     dword[esi+120h] ;ptHumanView->vViewAlpha
+
+        .check_view_alpha_min:
+        fcom    dword[vViewRotLimitN]
+        fnstsw  ax
+        test    ah,1
+        jnz     .clamp_view_alpha_min
+
+        .check_view_alpha_max:
+        fcom    dword[vViewRotLimitP]
+        fnstsw  ax
+        test    ah,41h
+        jz      .clamp_view_alpha_max
+
+        .pop_view_alpha:
+        fstp    st0
+
+        .get_view_gamma:
+        fld     dword[esi+12Ch] ;ptHumanView->vViewGamma
+
+        .check_view_gamma_min:
+        fcom    dword[vViewRotLimitN]
+        fnstsw  ax
+        test    ah,1
+        jnz     .clamp_view_gamma_min
+
+        .check_view_gamma_max:
+        fcom    dword[vViewRotLimitP]
+        fnstsw  ax
+        test    ah,41h
+        jz      .clamp_view_gamma_max
+
+        .pop_view_gamma:
+        fstp    st0
+
+        .end:
+        pop     edi esi ebx
+        ret
+
+        .zero_ideal_view_alpha:
+        mov     dword[esi+124h],ebx ;ptHumanView->vIdealViewAlpha
+        jmp     .set_view_alpha
+
+        .clamp_ideal_view_alpha_min:
+        fstp    st0
+        mov     dword[esi+124h],.vViewRotLimitN ;ptHumanView->vIdealViewAlpha
+        jmp     .set_view_alpha
+
+        .clamp_ideal_view_alpha_max:
+        fstp    st0
+        mov     dword[esi+124h],.vViewRotLimitP ;ptHumanView->vIdealViewAlpha
+        jmp     .set_view_alpha
+
+        .clamp_view_alpha_min:
+        fstp    st0
+        mov     dword[esi+120h],.vViewRotLimitN ;ptHumanView->vViewAlpha
+        jmp     .get_view_gamma
+
+        .clamp_view_alpha_max:
+        fstp    st0
+        mov     dword[esi+120h],.vViewRotLimitP ;ptHumanView->vViewAlpha
+        jmp     .get_view_gamma
+
+        .clamp_view_gamma_min:
+        fstp    st0
+        mov     dword[esi+12Ch],.vViewRotLimitN ;ptHumanView->vViewGamma
+        jmp     .end
+
+        .clamp_view_gamma_max:
+        fstp    st0
+        mov     dword[esi+12Ch],.vViewRotLimitP ;ptHumanView->vViewGamma
+        jmp     .end
+endp
 
 loc_483455: ; HumanCamera_MovementControlInput
 

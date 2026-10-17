@@ -54,6 +54,8 @@ ini_key_nfl_inputrate   du 'InputUpdateRate',0
 ini_key_nfl_renderfps   du 'MaxRenderFPS',0
 ini_key_nfl_en_interp   du 'EnableInterpolation',0
 ini_key_nfl_fpscounter  du 'ShowFPSCounter',0
+ini_key_nfl_msmoothing  du 'EnableMouseSmoothing',0
+ini_key_nfl_mdamping    du 'EnableMouseDamping',0
 ini_key_nfl_mousesensx  du 'MouseSensitivityMultX',0
 ini_key_nfl_mousesensy  du 'MouseSensitivityMultY',0
 ini_key_nfl_maxmousesen du 'SliderMaxMouseSensMult',0
